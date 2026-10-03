@@ -6,11 +6,16 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import dagger.hilt.android.HiltAndroidApp
+import okhttp3.OkHttpClient
 
 @HiltAndroidApp
 class ShopLiteApplication : Application(), ImageLoaderFactory {
     override fun newImageLoader(): ImageLoader {
+        val okHttpClient = OkHttpClient.Builder().build()
+        
         return ImageLoader.Builder(this)
+            .okHttpClient(okHttpClient)
+            .respectCacheHeaders(false) // Force Coil to cache aggressively offline
             .memoryCache {
                 MemoryCache.Builder(this)
                     .maxSizePercent(0.25)

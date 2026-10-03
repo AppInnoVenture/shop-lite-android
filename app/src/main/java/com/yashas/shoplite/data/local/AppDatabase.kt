@@ -19,6 +19,7 @@ data class ProductEntity(
     val name: String,
     val rating: Double,
     val price: Double,
+    val discountPercentage: Double,
     val imageUrl: String,
     val imagesJson: String,
     val description: String,
@@ -62,6 +63,9 @@ interface CartDao {
 @Dao
 interface ProductDao {
     @Query("SELECT * FROM products")
+    fun getAllProductsFlow(): Flow<List<ProductEntity>>
+
+    @Query("SELECT * FROM products")
     suspend fun getAllProducts(): List<ProductEntity>
     
     @Query("SELECT * FROM products WHERE id = :id LIMIT 1")
@@ -89,7 +93,7 @@ interface FavoriteDao {
     suspend fun removeFavorite(favorite: FavoriteEntity)
 }
 
-@Database(entities = [CartItemEntity::class, ProductEntity::class, FavoriteEntity::class], version = 2, exportSchema = false)
+@Database(entities = [CartItemEntity::class, ProductEntity::class, FavoriteEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract val cartDao: CartDao
     abstract val productDao: ProductDao

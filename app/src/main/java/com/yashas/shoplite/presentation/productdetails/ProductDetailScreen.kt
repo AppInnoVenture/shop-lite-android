@@ -31,6 +31,12 @@ import coil.compose.AsyncImage
 import com.yashas.shoplite.domain.model.Product
 import com.yashas.shoplite.domain.model.Review
 
+import androidx.compose.foundation.border
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.filled.Close
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
@@ -84,6 +90,7 @@ fun ProductDetailScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .navigationBarsPadding()
                             .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -177,12 +184,14 @@ fun ProductDetailScreen(
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 repeat(images.size) { iteration ->
-                                    val color = if (pagerState.currentPage == iteration) Color.DarkGray else Color.LightGray
+                                    val color = if (pagerState.currentPage == iteration) MaterialTheme.colorScheme.primary else Color.Transparent
+                                    val borderColor = if (pagerState.currentPage == iteration) MaterialTheme.colorScheme.primary else Color.Gray
                                     Box(
                                         modifier = Modifier
-                                            .padding(2.dp)
+                                            .padding(4.dp)
                                             .clip(CircleShape)
                                             .background(color)
+                                            .border(1.dp, borderColor, CircleShape)
                                             .size(8.dp)
                                     )
                                 }
@@ -201,12 +210,23 @@ fun ProductDetailScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = viewModel.formatPrice(product.price, currency),
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Column {
+                                Text(
+                                    text = viewModel.formatPrice(product.price - (product.price * (product.discountPercentage / 100)), currency),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (product.discountPercentage > 0) {
+                                    Text(
+                                        text = viewModel.formatPrice(product.price, currency),
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                        ),
+                                        color = Color.Gray
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.weight(1f))
                             Icon(Icons.Default.Star, contentDescription = "Rating", tint = Color(0xFFFFC107))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -266,19 +286,56 @@ fun ProductDetailScreen(
     if (zoomedImage != null) {
         Dialog(
             onDismissRequest = { zoomedImage = null },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
+            properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
         ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = Color.Black.copy(alpha = 0.9f),
-                onClick = { zoomedImage = null }
+            var scale by remember { mutableFloatStateOf(1f) }
+            var offsetX by remember { mutableFloatStateOf(0f) }
+            var offsetY by remember { mutableFloatStateOf(0f) }
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.9f))
             ) {
                 AsyncImage(
                     model = zoomedImage,
                     contentDescription = "Zoomed Image",
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offsetX,
+                            translationY = offsetY
+                        )
+                        .pointerInput(Unit) {
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                scale = (scale * zoom).coerceIn(1f, 5f)
+                                if (scale > 1f) {
+                                    offsetX += pan.x * scale
+                                    offsetY += pan.y * scale
+                                } else {
+                                    offsetX = 0f
+                                    offsetY = 0f
+                                }
+                            }
+                        },
                     contentScale = ContentScale.Fit
                 )
+                
+                IconButton(
+                    onClick = { zoomedImage = null },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .statusBarsPadding()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = Color.White
+                    )
+                }
             }
         }
     }

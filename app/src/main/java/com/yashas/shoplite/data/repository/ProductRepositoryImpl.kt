@@ -10,6 +10,8 @@ import com.yashas.shoplite.domain.model.Dimensions
 import com.yashas.shoplite.domain.model.Product
 import com.yashas.shoplite.domain.model.Review
 import com.yashas.shoplite.domain.repository.ProductRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class ProductRepositoryImpl @Inject constructor(
@@ -19,6 +21,36 @@ class ProductRepositoryImpl @Inject constructor(
 ) : ProductRepository {
 
     private val CACHE_EXPIRY_MS = 10 * 60 * 1000L // 10 minutes
+
+    override fun getProductsFlow(): Flow<List<Product>> {
+        return productDao.getAllProductsFlow().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun syncProducts(forceRefresh: Boolean): Result<Unit> {
+        return try {
+            val cachedEntities = productDao.getAllProducts()
+            val currentTime = System.currentTimeMillis()
+            
+            // Check if cache is valid
+            if (!forceRefresh && cachedEntities.isNotEmpty() && (currentTime - cachedEntities.first().lastUpdated < CACHE_EXPIRY_MS)) {
+                return Result.success(Unit)
+            }
+
+            // Fetch from network
+            val response = api.getProducts()
+            val entities = response.products.map { it.toEntity(currentTime) }
+            
+            // Update cache
+            productDao.clearAll()
+            productDao.insertAll(entities)
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
     override suspend fun getProducts(forceRefresh: Boolean): Result<List<Product>> {
         return try {
@@ -98,6 +130,7 @@ class ProductRepositoryImpl @Inject constructor(
             name = title,
             rating = rating,
             price = price,
+            discountPercentage = discountPercentage,
             imageUrl = thumbnail,
             imagesJson = gson.toJson(images ?: emptyList<String>()),
             description = description,
@@ -123,6 +156,7 @@ class ProductRepositoryImpl @Inject constructor(
             name = name,
             rating = rating,
             price = price,
+            discountPercentage = discountPercentage,
             imageUrl = imageUrl,
             images = try { gson.fromJson(imagesJson, stringListType) } catch (e: Exception) { emptyList() },
             description = description,

@@ -29,6 +29,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 import com.yashas.shoplite.domain.model.Product
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,6 +101,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .navigationBarsPadding() // Edge-to-edge support for lists below fab
         ) {
             // Search Bar
             OutlinedTextField(
@@ -127,6 +129,28 @@ fun HomeScreen(
                     )
                 }
             }
+            
+            // Sort Options
+            var expanded by remember { mutableStateOf(false) }
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                OutlinedButton(onClick = { expanded = true }) {
+                    Text("Sort By: ${state.selectedSortOption.displayName}")
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    SortOption.entries.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option.displayName) },
+                            onClick = {
+                                viewModel.onSortOptionSelected(option)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             // Offline indicator
             if (!isNetworkAvailable) {
@@ -144,7 +168,11 @@ fun HomeScreen(
             }
             
             // Content
-            if (!isNetworkAvailable && state.products.isEmpty()) {
+            if (state.isLoading && state.products.isEmpty() && !isRefreshing) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (!isNetworkAvailable && state.products.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Please enable internet connection", style = MaterialTheme.typography.titleMedium)
@@ -153,10 +181,6 @@ fun HomeScreen(
                             Text("Retry")
                         }
                     }
-                }
-            } else if (state.isLoading && state.products.isEmpty() && !isRefreshing) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
                 }
             } else if (state.error != null && state.products.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -177,9 +201,22 @@ fun HomeScreen(
                     state = pullToRefreshState,
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+                    val coroutineScope = rememberCoroutineScope()
+                    
+                    LaunchedEffect(state.selectedSortOption) {
+                        gridState.animateScrollToItem(0)
+                    }
+
                     LazyVerticalGrid(
+                        state = gridState,
                         columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(
+                            start = 16.dp, 
+                            end = 16.dp, 
+                            top = 16.dp, 
+                            bottom = 120.dp // Accommodates FAB and Navigation bar
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxSize()
@@ -194,6 +231,23 @@ fun HomeScreen(
                                 onAddToCart = { viewModel.addToCart(product) },
                                 onToggleFavorite = { viewModel.toggleFavorite(product) }
                             )
+                        }
+                        
+                        if (state.products.isNotEmpty()) {
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp)
+                                ) {
+                                    Text("That's all folks!", style = MaterialTheme.typography.bodyMedium)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    OutlinedButton(onClick = {
+                                        coroutineScope.launch { gridState.animateScrollToItem(0) }
+                                    }) {
+                                        Text("Scroll up")
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -253,11 +307,23 @@ fun ProductCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = formatPrice(product.price, currency),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Column {
+                        Text(
+                            text = formatPrice(product.price - (product.price * (product.discountPercentage / 100)), currency),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (product.discountPercentage > 0) {
+                            Text(
+                                text = formatPrice(product.price, currency),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                ),
+                                color = Color.Gray
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = onAddToCart,
                         modifier = Modifier.size(32.dp)

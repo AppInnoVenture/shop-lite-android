@@ -77,4 +77,5 @@ dependencies {
 
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.datastore.preferences)
+    implementation("androidx.core:core-splashscreen:1.0.1")
 }
