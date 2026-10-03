@@ -8,7 +8,7 @@ class SearchProductsUseCase @Inject constructor(
     private val repository: ProductRepository
 ) {
     suspend operator fun invoke(query: String): Result<List<Product>> {
-        if (query.isBlank()) return Result.success(emptyList())
+        if (query.isBlank()) return repository.getProducts()
         return repository.searchProducts(query)
     }
 }

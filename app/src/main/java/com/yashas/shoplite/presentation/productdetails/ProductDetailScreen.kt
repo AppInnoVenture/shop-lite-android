@@ -1,18 +1,20 @@
 package com.yashas.shoplite.presentation.productdetails
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,42 +22,52 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import coil.compose.AsyncImage
 import com.yashas.shoplite.domain.model.Product
+import com.yashas.shoplite.domain.model.Review
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
     onNavigateBack: () -> Unit,
-    onAddToCart: (Product) -> Unit,
-    viewModel: ProductDetailViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel(checkNotNull(
-        LocalViewModelStoreOwner.current) {
-        "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
-    }, null)
+    onNavigateToCart: () -> Unit,
+    onNavigateToFavorites: () -> Unit,
+    viewModel: ProductDetailViewModel = hiltViewModel(
+        checkNotNull(
+            LocalViewModelStoreOwner.current
+        ) {
+            "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
+        }, null
+    )
 ) {
     val state by viewModel.state.collectAsState()
-    var isFavorite by remember { mutableStateOf(false) }
+    val cartItems by viewModel.cartItems.collectAsState()
+    val favoriteIds by viewModel.favoriteIds.collectAsState()
+    val currency by viewModel.currency.collectAsState()
+
+    var zoomedImage by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Product Details") },
+                title = { Text("Details") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { isFavorite = !isFavorite }) {
+                    val isFavorite = state.product?.id?.let { favoriteIds.contains(it) } == true
+                    IconButton(onClick = { state.product?.let { viewModel.toggleFavorite(it) } }) {
                         Icon(
-                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            Icons.Default.Favorite,
                             contentDescription = "Favorite",
-                            tint = if (isFavorite) Color.Red else MaterialTheme.colorScheme.onSurface
+                            tint = if (isFavorite) Color.Red else LocalContentColor.current
                         )
                     }
                 }
@@ -63,235 +75,249 @@ fun ProductDetailScreen(
         },
         bottomBar = {
             state.product?.let { product ->
-                ProductDetailBottomBar(
-                    product = product,
-                    onAddToCart = { onAddToCart(product) }
-                )
-            }
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when {
-                state.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-
-                state.error != null -> {
-                    Column(
+                val cartItem = cartItems.find { it.productId == product.id }
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shadowElevation = 8.dp,
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    Row(
                         modifier = Modifier
-                            .align(Alignment.Center)
+                            .fillMaxWidth()
                             .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = state.error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(onClick = { viewModel.loadProduct() }) {
-                            Text("Retry")
+                        if (cartItem != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                IconButton(
+                                    onClick = { viewModel.updateCartQuantity(cartItem.productId, cartItem.quantity - 1) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Text("-", style = MaterialTheme.typography.titleLarge)
+                                }
+                                Text(
+                                    text = cartItem.quantity.toString(),
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                IconButton(
+                                    onClick = { viewModel.updateCartQuantity(cartItem.productId, cartItem.quantity + 1) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Text("+", style = MaterialTheme.typography.titleLarge)
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Button(
+                                    onClick = onNavigateToCart,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Open Cart")
+                                }
+                            }
+                        } else {
+                            Button(
+                                onClick = { viewModel.addToCart(product) },
+                                modifier = Modifier.weight(1f),
+                                enabled = product.stock > 0
+                            ) {
+                                Text(if (product.stock > 0) "Add to Cart" else "Out of Stock")
+                            }
                         }
                     }
                 }
-
-                state.product != null -> {
-                    ProductDetailContent(product = state.product!!)
+            }
+        }
+    ) { padding ->
+        if (state.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (state.error != null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(state.error ?: "Error", color = MaterialTheme.colorScheme.error)
+            }
+        } else if (state.product != null) {
+            val product = state.product!!
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                // Image Carousel
+                item {
+                    val images = if (product.images.isNotEmpty()) product.images else listOf(product.imageUrl)
+                    val pagerState = rememberPagerState(pageCount = { images.size })
+                    
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp)
+                        ) { page ->
+                            AsyncImage(
+                                model = images[page],
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clickable { zoomedImage = images[page] },
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                        
+                        // Dots indicator
+                        if (images.size > 1) {
+                            Row(
+                                Modifier
+                                    .wrapContentHeight()
+                                    .fillMaxWidth()
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 8.dp),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                repeat(images.size) { iteration ->
+                                    val color = if (pagerState.currentPage == iteration) Color.DarkGray else Color.LightGray
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(2.dp)
+                                            .clip(CircleShape)
+                                            .background(color)
+                                            .size(8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                item {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = product.name,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = viewModel.formatPrice(product.price, currency),
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            Icon(Icons.Default.Star, contentDescription = "Rating", tint = Color(0xFFFFC107))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = product.rating.toString(), style = MaterialTheme.typography.bodyLarge)
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(text = "Brand: ${product.brand}", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = "Category: ${product.category.replaceFirstChar { it.uppercase() }}", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = "SKU: ${product.sku}", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = "Stock: ${product.stock} units", style = MaterialTheme.typography.bodyMedium)
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Description", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(product.description, style = MaterialTheme.typography.bodyMedium)
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Shipping & Warranty", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Warranty: ${product.warrantyInformation}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Shipping: ${product.shippingInformation}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Return Policy: ${product.returnPolicy}", style = MaterialTheme.typography.bodyMedium)
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Dimensions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("W: ${product.dimensions.width} x H: ${product.dimensions.height} x D: ${product.dimensions.depth}", style = MaterialTheme.typography.bodyMedium)
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text("Reviews", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+                
+                if (product.reviews.isEmpty()) {
+                    item {
+                        Text(
+                            "No reviews yet.",
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                } else {
+                    items(product.reviews) { review ->
+                        ReviewItem(review)
+                    }
+                }
+                
+                item {
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
             }
         }
     }
+    
+    if (zoomedImage != null) {
+        Dialog(
+            onDismissRequest = { zoomedImage = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = Color.Black.copy(alpha = 0.9f),
+                onClick = { zoomedImage = null }
+            ) {
+                AsyncImage(
+                    model = zoomedImage,
+                    contentDescription = "Zoomed Image",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
+    }
 }
 
 @Composable
-private fun ProductDetailContent(
-    product: Product,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+fun ReviewItem(review: Review) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        AsyncImage(
-            model = product.imageUrl,
-            contentDescription = product.name,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(280.dp)
-                .clip(RoundedCornerShape(16.dp)),
-            contentScale = ContentScale.Crop
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Surface(
-            shape = RoundedCornerShape(6.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-        ) {
-            Text(
-                text = product.category.uppercase(),
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                fontSize = 12.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = product.name,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = "Rating",
-                    tint = Color(0xFFFFB300),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "${product.rating} / 5.0",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = review.reviewerName,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
-            }
-
-            Text(
-                text = if (product.stock > 0) "In Stock (${product.stock})" else "Out of Stock",
-                color = if (product.stock > 0) Color(0xFF388E3C) else MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Description",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = product.description.ifBlank { "No description available for this product." },
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            lineHeight = 22.sp
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Specifications",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                SpecificationRow(label = "Category", value = product.category)
-                Spacer(modifier = Modifier.height(6.dp))
-                SpecificationRow(label = "Item ID", value = product.id)
-                Spacer(modifier = Modifier.height(6.dp))
-                SpecificationRow(label = "Available Units", value = "${product.stock}")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(80.dp))
-    }
-}
-
-@Composable
-private fun SpecificationRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-@Composable
-private fun ProductDetailBottomBar(
-    product: Product,
-    onAddToCart: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shadowElevation = 8.dp,
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
+                Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "Total Price",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "$${product.price}",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    text = review.date.substringBefore("T"),
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
-
-            Button(
-                onClick = onAddToCart,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.height(50.dp),
-                enabled = product.stock > 0
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AddShoppingCart,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (product.stock > 0) "Add to Cart" else "Unavailable")
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                repeat(5) { i ->
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        tint = if (i < review.rating) Color(0xFFFFC107) else Color.LightGray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = review.comment, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

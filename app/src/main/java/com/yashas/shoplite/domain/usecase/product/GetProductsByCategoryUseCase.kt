@@ -4,10 +4,10 @@ import com.yashas.shoplite.domain.model.Product
 import com.yashas.shoplite.domain.repository.ProductRepository
 import javax.inject.Inject
 
-class GetProductUseCase @Inject constructor(
+class GetProductsByCategoryUseCase @Inject constructor(
     private val repository: ProductRepository
 ) {
-    suspend operator fun invoke(id: String): Result<Product> {
-        return repository.getProductById(id)
+    suspend operator fun invoke(category: String): Result<List<Product>> {
+        return repository.getProductsByCategory(category)
     }
 }

@@ -1,31 +1,44 @@
 package com.yashas.shoplite.di
 
-import com.yashas.shoplite.data.local.AppDatabase
-import com.yashas.shoplite.data.local.CartRepositoryImpl
-import com.yashas.shoplite.data.remote.DummyJsonApi
-//import com.yashas.shoplite.data.repository.CartRepositoryImpl
+import com.yashas.shoplite.data.repository.CartRepositoryImpl
+import com.yashas.shoplite.data.repository.FavoritesRepositoryImpl
 import com.yashas.shoplite.data.repository.ProductRepositoryImpl
+import com.yashas.shoplite.data.repository.SettingsRepositoryImpl
 import com.yashas.shoplite.domain.repository.CartRepository
+import com.yashas.shoplite.domain.repository.FavoritesRepository
 import com.yashas.shoplite.domain.repository.ProductRepository
+import com.yashas.shoplite.domain.repository.SettingsRepository
+import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object RepositoryModule {
+abstract class RepositoryModule {
 
-    @Provides
+    @Binds
     @Singleton
-    fun provideProductRepository(api: DummyJsonApi): ProductRepository {
-        return ProductRepositoryImpl(api)
-    }
+    abstract fun bindProductRepository(
+        productRepositoryImpl: ProductRepositoryImpl
+    ): ProductRepository
 
-    @Provides
+    @Binds
     @Singleton
-    fun provideCartRepository(db: AppDatabase): CartRepository {
-        return CartRepositoryImpl(db.cartDao)
-    }
+    abstract fun bindCartRepository(
+        cartRepositoryImpl: CartRepositoryImpl
+    ): CartRepository
+    
+    @Binds
+    @Singleton
+    abstract fun bindFavoritesRepository(
+        favoritesRepositoryImpl: FavoritesRepositoryImpl
+    ): FavoritesRepository
+    
+    @Binds
+    @Singleton
+    abstract fun bindSettingsRepository(
+        settingsRepositoryImpl: SettingsRepositoryImpl
+    ): SettingsRepository
 }

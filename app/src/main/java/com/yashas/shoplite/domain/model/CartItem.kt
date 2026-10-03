@@ -3,7 +3,8 @@ package com.yashas.shoplite.domain.model
 data class CartItem(
     val productId: String,
     val name: String,
-    val price: Int,
+    val price: Double,
     val imageUrl: String,
-    val quantity: Int
+    val quantity: Int,
+    val isOutOfStock: Boolean = false
 )

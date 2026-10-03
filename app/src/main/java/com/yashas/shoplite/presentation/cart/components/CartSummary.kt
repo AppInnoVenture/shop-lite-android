@@ -1,8 +1,10 @@
 package com.yashas.shoplite.presentation.cart.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -10,58 +12,58 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun CartSummary(
-    subtotal: Int,
-    deliveryFee: Int,
-    total: Int,
-    onCheckoutClick: () -> Unit,
-    modifier: Modifier = Modifier
+    subtotal: Double,
+    deliveryFee: Double,
+    total: Double,
+    currency: String,
+    formatPrice: (Double, String) -> String,
+    onCheckout: () -> Unit
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         shadowElevation = 8.dp,
         color = MaterialTheme.colorScheme.surface
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Subtotal", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("$$subtotal", fontWeight = FontWeight.SemiBold)
+                Text("Subtotal", style = MaterialTheme.typography.bodyMedium)
+                Text(formatPrice(subtotal, currency), style = MaterialTheme.typography.bodyMedium)
             }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
+            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Delivery Fee", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("$$deliveryFee", fontWeight = FontWeight.SemiBold)
+                Text("Delivery Fee", style = MaterialTheme.typography.bodyMedium)
+                Text(formatPrice(deliveryFee, currency), style = MaterialTheme.typography.bodyMedium)
             }
-
-            Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(10.dp))
-
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Total", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("$$total", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("Total", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    text = formatPrice(total, currency),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
             Button(
-                onClick = onCheckoutClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp)
+                onClick = onCheckout,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = subtotal > 0
             ) {
-                Text("Proceed to Checkout", style = MaterialTheme.typography.titleMedium)
+                Text("Proceed to Checkout")
             }
         }
     }

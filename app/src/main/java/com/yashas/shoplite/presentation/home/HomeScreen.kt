@@ -1,243 +1,272 @@
 package com.yashas.shoplite.presentation.home
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.*
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import com.yashas.shoplite.presentation.home.components.ProductCard
+import coil.compose.AsyncImage
+import com.yashas.shoplite.domain.model.Product
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToProductDetails: (String) -> Unit,
     onNavigateToCart: () -> Unit,
-    onNavigateToProfile: () -> Unit,
-    viewModel: HomeViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel(checkNotNull(
-        LocalViewModelStoreOwner.current) {
-                "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
-            }, null)
+    onNavigateToSettings: () -> Unit,
+    onNavigateToFavorites: () -> Unit,
+    viewModel: HomeViewModel = hiltViewModel(
+        checkNotNull(
+            LocalViewModelStoreOwner.current
+        ) {
+            "No ViewModelStoreOwner was provided via LocalViewModelStoreOwner"
+        }, null
+    )
 ) {
     val state by viewModel.state.collectAsState()
+    val isNetworkAvailable by viewModel.isNetworkAvailable.collectAsState()
+    val cartItems by viewModel.cartItems.collectAsState()
+    val favoriteIds by viewModel.favoriteIds.collectAsState()
+    val currency by viewModel.currency.collectAsState()
+    
+    val cartItemCount = cartItems.sumOf { it.quantity }
+    val cartTotal = cartItems.sumOf { it.price * it.quantity }
+    
+    val pullToRefreshState = rememberPullToRefreshState()
+    var isRefreshing by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "eShop",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Find your best products",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            TopAppBar(
+                title = { Text("ShopLite") },
+                actions = {
+                    IconButton(onClick = onNavigateToFavorites) {
+                        Icon(Icons.Default.Favorite, contentDescription = "Favorites")
+                    }
                     IconButton(onClick = onNavigateToCart) {
-                        Icon(
-                            imageVector = Icons.Default.ShoppingCart,
-                            contentDescription = "Cart",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        BadgedBox(
+                            badge = {
+                                if (cartItemCount > 0) {
+                                    Badge { Text(cartItemCount.toString()) }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
+                        }
                     }
-
-                    IconButton(onClick = onNavigateToProfile) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Profile",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 }
+            )
+        },
+        floatingActionButton = {
+            if (cartItemCount > 0) {
+                ExtendedFloatingActionButton(
+                    onClick = onNavigateToCart,
+                    icon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) },
+                    text = { 
+                        Text("View Cart ($cartItemCount) • ${viewModel.formatPrice(cartTotal, currency)}") 
+                    }
+                )
             }
-        }
-    ) { paddingValues ->
-        Box(
+        },
+        floatingActionButtonPosition = FabPosition.Center
+    ) { padding ->
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(padding)
         ) {
-            when {
-                state.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
+            // Search Bar
+            OutlinedTextField(
+                value = state.searchQuery,
+                onValueChange = viewModel::onSearchQueryChanged,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("Search products...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            // Categories
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(state.categories) { category ->
+                    FilterChip(
+                        selected = state.selectedCategory == category,
+                        onClick = { viewModel.onCategorySelected(category) },
+                        label = { Text(category) }
                     )
                 }
+            }
 
-                state.error != null -> {
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = state.error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(onClick = viewModel::loadProducts) {
+            // Offline indicator
+            if (!isNetworkAvailable) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "You are offline. Showing cached products.",
+                        modifier = Modifier.padding(8.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+            
+            // Content
+            if (!isNetworkAvailable && state.products.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Please enable internet connection", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { viewModel.refresh() }) {
                             Text("Retry")
                         }
                     }
                 }
-
-                else -> {
+            } else if (state.isLoading && state.products.isEmpty() && !isRefreshing) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (state.error != null && state.products.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(state.error ?: "Unknown error", color = MaterialTheme.colorScheme.error)
+                }
+            } else if (state.products.isEmpty() && state.searchQuery.isNotEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No products found matching '${state.searchQuery}'")
+                }
+            } else {
+                PullToRefreshBox(
+                    isRefreshing = state.isLoading,
+                    onRefresh = { 
+                        isRefreshing = true
+                        viewModel.refresh()
+                        isRefreshing = false // Note: Actual implementation should track when loading completes
+                    },
+                    state = pullToRefreshState,
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
                         contentPadding = PaddingValues(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // 1. Search Bar
-                        item(span = { GridItemSpan(2) }) {
-                            OutlinedTextField(
-                                value = state.searchQuery,
-                                onValueChange = viewModel::onSearchQueryChange,
-                                placeholder = { Text("Search products, categories...") },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = "Search"
-                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                singleLine = true
+                        items(state.products, key = { it.id }) { product ->
+                            ProductCard(
+                                product = product,
+                                isFavorite = favoriteIds.contains(product.id),
+                                currency = currency,
+                                formatPrice = viewModel::formatPrice,
+                                onClick = { onNavigateToProductDetails(product.id) },
+                                onAddToCart = { viewModel.addToCart(product) },
+                                onToggleFavorite = { viewModel.toggleFavorite(product) }
                             )
                         }
+                    }
+                }
+            }
+        }
+    }
+}
 
-                        // 2. Promotional Banner
-                        item(span = { GridItemSpan(2) }) {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(130.dp),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.horizontalGradient(
-                                                listOf(
-                                                    MaterialTheme.colorScheme.primary,
-                                                    MaterialTheme.colorScheme.secondary
-                                                )
-                                            )
-                                        )
-                                        .padding(16.dp),
-                                    contentAlignment = Alignment.CenterStart
-                                ) {
-                                    Column {
-                                        Text(
-                                            text = "Special Deal!",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = "Get up to 40% OFF\non top electronics & fashion",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = Color.White
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // 3. Category Chips
-                        item(span = { GridItemSpan(2) }) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                state.categories.forEach { category ->
-                                    val isSelected = category == state.selectedCategory
-                                    FilterChip(
-                                        selected = isSelected,
-                                        onClick = { viewModel.onCategorySelect(category) },
-                                        label = { Text(category) }
-                                    )
-                                }
-                            }
-                        }
-
-                        // 4. Products Header
-                        item(span = { GridItemSpan(2) }) {
-                            Text(
-                                text = "Popular Products",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        // 5. Empty State Check
-                        if (state.filteredProducts.isEmpty()) {
-                            item(span = { GridItemSpan(2) }) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "No products found",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        } else {
-                            // 6. Product Items Grid
-                            items(
-                                items = state.filteredProducts,
-                                key = { it.id }
-                            ) { product ->
-                                ProductCard(
-                                    product = product,
-                                    onProductClick = { onNavigateToProductDetails(product.id) },
-                                    onAddToCartClick = {
-                                        onNavigateToProductDetails(product.id)
-                                    }
-                                )
-                            }
-                        }
+@Composable
+fun ProductCard(
+    product: Product,
+    isFavorite: Boolean,
+    currency: String,
+    formatPrice: (Double, String) -> String,
+    onClick: () -> Unit,
+    onAddToCart: () -> Unit,
+    onToggleFavorite: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column {
+            Box {
+                AsyncImage(
+                    model = product.imageUrl,
+                    contentDescription = product.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    contentScale = ContentScale.Crop
+                )
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = "Favorite",
+                        tint = if (isFavorite) Color.Red else Color.LightGray
+                    )
+                }
+            }
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatPrice(product.price, currency),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    IconButton(
+                        onClick = onAddToCart,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.ShoppingCart,
+                            contentDescription = "Add to Cart",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
