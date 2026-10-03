@@ -25,6 +25,7 @@ import com.yashas.shoplite.domain.model.Product
 
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,11 +64,16 @@ fun FavoritesScreen(
                 Text("No favorite products yet.", style = MaterialTheme.typography.bodyLarge)
             }
         } else {
+            val layoutDirection = LocalLayoutDirection.current
             LazyColumn(
                 contentPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = padding.calculateTopPadding())
+                    .padding(
+                        top = padding.calculateTopPadding(),
+                        start = padding.calculateStartPadding(layoutDirection),
+                        end = padding.calculateEndPadding(layoutDirection)
+                    )
             ) {
                 items(state.items, key = { it.id }) { product ->
                     FavoriteItem(
@@ -110,7 +116,7 @@ fun FavoriteItem(
                     .crossfade(true)
                     .build(),
                 contentDescription = product.name,
-                placeholder = androidx.compose.ui.graphics.painter.ColorPainter(Color.LightGray),
+                placeholder = ColorPainter(Color.LightGray),
                 error = androidx.compose.ui.res.painterResource(com.yashas.shoplite.R.drawable.baseline_image_not_available_24),
                 modifier = Modifier
                     .size(80.dp)

@@ -30,7 +30,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import com.yashas.shoplite.domain.model.Product
-
+import androidx.compose.ui.platform.LocalLayoutDirection
 import com.yashas.shoplite.presentation.components.AnimatedIconButton
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -39,6 +39,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.runtime.saveable.rememberSaveable
+
+import androidx.compose.material.icons.filled.Clear
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,11 +127,16 @@ fun HomeScreen(
         },
         floatingActionButtonPosition = FabPosition.Center
     ) { padding ->
+        val layoutDirection = LocalLayoutDirection.current
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .navigationBarsPadding() // Edge-to-edge support for lists below fab
+                .padding(
+                    top = padding.calculateTopPadding(),
+                    start = padding.calculateStartPadding(layoutDirection),
+                    end = padding.calculateEndPadding(layoutDirection)
+                )
+            //    .navigationBarsPadding()
         ) {
             // Search Bar
             OutlinedTextField(
@@ -140,6 +147,13 @@ fun HomeScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 placeholder = { Text("Search products...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (state.searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                        }
+                    }
+                },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp)
             )
@@ -256,7 +270,7 @@ fun HomeScreen(
                             start = 16.dp, 
                             end = 16.dp, 
                             top = 16.dp, 
-                            bottom = 120.dp // Accommodates FAB and Navigation bar
+                            bottom = padding.calculateBottomPadding() + 80.dp
                         ),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -331,7 +345,7 @@ fun ProductCard(
                         .crossfade(true)
                         .build(),
                     contentDescription = product.name,
-                    placeholder = androidx.compose.ui.graphics.painter.ColorPainter(Color.LightGray),
+                    placeholder = ColorPainter(Color.LightGray),
                     error = androidx.compose.ui.res.painterResource(com.yashas.shoplite.R.drawable.baseline_image_not_available_24),
                     modifier = Modifier
                         .fillMaxWidth()

@@ -79,6 +79,10 @@ class HomeViewModel @Inject constructor(
     }
 
     init {
+        val debouncedSearchQuery = searchQueryFlow
+            .debounce(600)
+            .distinctUntilChanged()
+
         // Setup base products flow from DB
         viewModelScope.launch {
             getProductsUseCase().collect { dbProducts ->
@@ -109,7 +113,7 @@ class HomeViewModel @Inject constructor(
                 fetchedProductsFlow,
                 selectedCategoryFlow,
                 sortOptionFlow,
-                searchQueryFlow
+                debouncedSearchQuery
             ) { products, category, sortOption, query ->
                 var filtered = products
                 
@@ -140,12 +144,9 @@ class HomeViewModel @Inject constructor(
         
         // Search flow triggering fetch
         viewModelScope.launch {
-            searchQueryFlow
-                .debounce(400)
-                .distinctUntilChanged()
-                .collect { query ->
-                    fetchData(query, selectedCategoryFlow.value)
-                }
+            debouncedSearchQuery.collect { query ->
+                fetchData(query, selectedCategoryFlow.value)
+            }
         }
         
         // Category flow triggering fetch
@@ -153,28 +154,27 @@ class HomeViewModel @Inject constructor(
             selectedCategoryFlow
                 .drop(1) // Skip initial value
                 .collect { category ->
-                    fetchData("", category) // Empty query on new category
+                    fetchData(searchQueryFlow.value, category)
                 }
         }
     }
     
     private suspend fun fetchData(query: String, category: String) {
         _state.update { it.copy(isLoading = true, error = null) }
-        val result = if (query.isNotBlank()) {
-            searchProductsUseCase(query)
-        } else if (category != "All") {
-            getProductsByCategoryUseCase(category)
-        } else {
-            getProductsUseCase.sync(forceRefresh = false)
-            // since getProductsUseCase.sync returns Result<Unit>, we just fetch from DB directly
-            Result.success(fetchedProductsFlow.value)
-        }
-        
-        result.onSuccess { products ->
-            fetchedProductsFlow.value = products
+        try {
+            if (query.isNotBlank()) {
+                val res = searchProductsUseCase(query)
+                if (res.isFailure) throw res.exceptionOrNull() ?: Exception("Search failed")
+            } else if (category != "All") {
+                val res = getProductsByCategoryUseCase(category)
+                if (res.isFailure) throw res.exceptionOrNull() ?: Exception("Category fetch failed")
+            } else {
+                val res = getProductsUseCase.sync(forceRefresh = false)
+                if (res.isFailure) throw res.exceptionOrNull() ?: Exception("Sync failed")
+            }
             _state.update { it.copy(isLoading = false) }
-        }.onFailure { error ->
-            _state.update { it.copy(error = error.message ?: "An unexpected error occurred", isLoading = false) }
+        } catch (e: Exception) {
+            _state.update { it.copy(error = e.message ?: "An unexpected error occurred", isLoading = false) }
         }
     }
     

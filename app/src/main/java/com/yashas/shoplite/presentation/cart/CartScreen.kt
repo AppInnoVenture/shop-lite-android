@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -18,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import coil.compose.AsyncImage
 import com.yashas.shoplite.domain.model.CartItem
@@ -26,6 +24,7 @@ import com.yashas.shoplite.presentation.cart.components.CartSummary
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.platform.LocalLayoutDirection
 
 import com.yashas.shoplite.presentation.components.AnimatedIconButton
 
@@ -78,11 +77,16 @@ fun CartScreen(
                 Text("Your cart is empty", style = MaterialTheme.typography.titleMedium)
             }
         } else {
+            val layoutDirection = LocalLayoutDirection.current
             LazyColumn(
                 contentPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = padding.calculateTopPadding())
+                    .padding(
+                        top = padding.calculateTopPadding(),
+                        start = padding.calculateStartPadding(layoutDirection),
+                        end = padding.calculateEndPadding(layoutDirection)
+                    )
             ) {
                 items(state.items, key = { it.productId }) { item ->
                     CartItemRow(
@@ -122,7 +126,7 @@ fun CartItemRow(
                     .crossfade(true)
                     .build(),
                 contentDescription = item.name,
-                placeholder = androidx.compose.ui.graphics.painter.ColorPainter(Color.LightGray),
+                placeholder = ColorPainter(Color.LightGray),
                 error = androidx.compose.ui.res.painterResource(com.yashas.shoplite.R.drawable.baseline_image_not_available_24),
                 modifier = Modifier
                     .size(80.dp)
@@ -139,19 +143,11 @@ fun CartItemRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                if (item.isOutOfStock) {
-                    Text(
-                        text = "Out of Stock",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                } else {
-                    Text(
-                        text = formatPrice(item.price, currency),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Text(
+                    text = formatPrice(item.price, currency),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically
