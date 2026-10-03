@@ -25,6 +25,9 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import coil.compose.AsyncImage
 import com.yashas.shoplite.domain.model.Product
 
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.graphics.Color
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
@@ -38,7 +41,7 @@ fun FavoritesScreen(
         }, null
     )
 ) {
-    val favorites by viewModel.favorites.collectAsState()
+    val state by viewModel.state.collectAsState()
     val currency by viewModel.currency.collectAsState()
 
     Scaffold(
@@ -53,17 +56,22 @@ fun FavoritesScreen(
             )
         }
     ) { padding ->
-        if (favorites.isEmpty()) {
+        if (state.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (state.items.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("No favorite products yet.", style = MaterialTheme.typography.bodyLarge)
             }
         } else {
             LazyColumn(
+                contentPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(top = padding.calculateTopPadding())
             ) {
-                items(favorites, key = { it.id }) { product ->
+                items(state.items, key = { it.id }) { product ->
                     FavoriteItem(
                         product = product,
                         currency = currency,
@@ -99,10 +107,17 @@ fun FavoriteItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = product.imageUrl,
+                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                    .data(product.imageUrl)
+                    .crossfade(true)
+                    .build(),
                 contentDescription = product.name,
-                modifier = Modifier.size(80.dp),
-                contentScale = ContentScale.Crop
+                placeholder = ColorPainter(Color.LightGray),
+                error = ColorPainter(Color.LightGray),
+                modifier = Modifier
+                    .size(80.dp)
+                    .aspectRatio(1f),
+                contentScale = ContentScale.Fit
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {

@@ -16,6 +16,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class FavoritesState(
+    val items: List<Product> = emptyList(),
+    val isLoading: Boolean = true
+)
+
 @HiltViewModel
 class FavoritesViewModel @Inject constructor(
     private val getFavoritesUseCase: GetFavoritesUseCase,
@@ -24,17 +29,22 @@ class FavoritesViewModel @Inject constructor(
     private val currencyUseCase: CurrencyUseCase
 ) : ViewModel() {
 
-    val favorites: StateFlow<List<Product>> = getFavoritesUseCase().stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    private val _state = MutableStateFlow(FavoritesState())
+    val state: StateFlow<FavoritesState> = _state.asStateFlow()
     
     val currency: StateFlow<String> = currencyUseCase.getCurrency().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = "USD"
     )
+
+    init {
+        viewModelScope.launch {
+            getFavoritesUseCase().collect { items ->
+                _state.value = FavoritesState(items = items, isLoading = false)
+            }
+        }
+    }
     
     fun formatPrice(price: Double, curr: String): String {
         return currencyUseCase.formatPrice(price, curr)

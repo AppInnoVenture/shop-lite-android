@@ -52,7 +52,8 @@ class CartViewModel @Inject constructor(
                     items = cartItems,
                     subtotal = subtotal,
                     deliveryFee = deliveryFee,
-                    total = subtotal + deliveryFee
+                    total = subtotal + deliveryFee,
+                    isLoading = false
                 )
             }
         }

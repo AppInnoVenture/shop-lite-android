@@ -1,5 +1,6 @@
 package com.yashas.shoplite.presentation.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -29,6 +30,15 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import com.yashas.shoplite.domain.model.Product
+
+import com.yashas.shoplite.presentation.components.AnimatedIconButton
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.runtime.saveable.rememberSaveable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,18 +161,38 @@ fun HomeScreen(
             }
 
             // Offline indicator
-            if (!isNetworkAvailable) {
-                Surface(
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "You are offline. Showing cached products.",
-                        modifier = Modifier.padding(8.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+            var dismissOfflineBanner by rememberSaveable { mutableStateOf(false) }
+            LaunchedEffect(isNetworkAvailable) {
+                if (isNetworkAvailable) dismissOfflineBanner = false
+            }
+
+            AnimatedVisibility(visible = !isNetworkAvailable && !dismissOfflineBanner) {
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = {
+                        if (it != SwipeToDismissBoxValue.Settled) {
+                            dismissOfflineBanner = true
+                            true
+                        } else false
+                    }
+                )
+                
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = { Box(Modifier.fillMaxSize().background(Color.Transparent)) },
+                    content = {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "You are offline. Showing cached products. (Swipe to dismiss)",
+                                modifier = Modifier.padding(8.dp),
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                )
             }
             
             // Content
@@ -202,8 +232,21 @@ fun HomeScreen(
                     val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
                     val coroutineScope = rememberCoroutineScope()
                     
-                    LaunchedEffect(state.selectedSortOption) {
-                        gridState.scrollToItem(0)
+                    var previousQuery by rememberSaveable { mutableStateOf(state.searchQuery) }
+                    var previousCategory by rememberSaveable { mutableStateOf(state.selectedCategory) }
+                    var previousSort by rememberSaveable { mutableStateOf(state.selectedSortOption) }
+
+                    LaunchedEffect(state.products) {
+                        if (previousQuery != state.searchQuery || 
+                            previousCategory != state.selectedCategory || 
+                            previousSort != state.selectedSortOption) {
+                            
+                            gridState.animateScrollToItem(0)
+                            
+                            previousQuery = state.searchQuery
+                            previousCategory = state.selectedCategory
+                            previousSort = state.selectedSortOption
+                        }
                     }
 
                     LazyVerticalGrid(
@@ -235,14 +278,24 @@ fun HomeScreen(
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp)
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)
                                 ) {
-                                    Text("That's all folks!", style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = "✨ That's all folks! ✨", 
+                                        style = MaterialTheme.typography.headlineSmall, 
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
                                     Spacer(modifier = Modifier.height(16.dp))
-                                    OutlinedButton(onClick = {
-                                        coroutineScope.launch { gridState.animateScrollToItem(0) }
-                                    }) {
-                                        Text("Scroll up")
+                                    FilledTonalButton(
+                                        onClick = {
+                                            coroutineScope.launch { gridState.animateScrollToItem(0) }
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                                    ) {
+                                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Scroll up")
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Scroll to Top", style = MaterialTheme.typography.titleMedium)
                                     }
                                 }
                             }
@@ -273,14 +326,19 @@ fun ProductCard(
         Column {
             Box {
                 AsyncImage(
-                    model = product.imageUrl,
+                    model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                        .data(product.imageUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = product.name,
+                    placeholder = ColorPainter(Color.LightGray),
+                    error = ColorPainter(Color.LightGray),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(150.dp),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Fit
                 )
-                IconButton(
+                AnimatedIconButton(
                     onClick = onToggleFavorite,
                     modifier = Modifier.align(Alignment.TopEnd)
                 ) {
@@ -322,7 +380,7 @@ fun ProductCard(
                             )
                         }
                     }
-                    IconButton(
+                    AnimatedIconButton(
                         onClick = onAddToCart,
                         modifier = Modifier.size(32.dp)
                     ) {

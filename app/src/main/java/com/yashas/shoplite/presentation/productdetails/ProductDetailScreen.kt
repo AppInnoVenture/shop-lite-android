@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,10 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import coil.compose.AsyncImage
-import com.yashas.shoplite.domain.model.Product
 import com.yashas.shoplite.domain.model.Review
 
 import androidx.compose.foundation.border
@@ -36,6 +33,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Close
+
+import androidx.compose.ui.graphics.painter.ColorPainter
+import com.yashas.shoplite.presentation.components.AnimatedIconButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +69,7 @@ fun ProductDetailScreen(
                 },
                 actions = {
                     val isFavorite = state.product?.id?.let { favoriteIds.contains(it) } == true
-                    IconButton(onClick = { state.product?.let { viewModel.toggleFavorite(it) } }) {
+                    AnimatedIconButton(onClick = { state.product?.let { viewModel.toggleFavorite(it) } }) {
                         Icon(
                             Icons.Default.Favorite,
                             contentDescription = "Favorite",
@@ -97,7 +97,7 @@ fun ProductDetailScreen(
                     ) {
                         if (cartItem != null) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                IconButton(
+                                AnimatedIconButton(
                                     onClick = { viewModel.updateCartQuantity(cartItem.productId, cartItem.quantity - 1) },
                                     modifier = Modifier.size(32.dp)
                                 ) {
@@ -108,7 +108,7 @@ fun ProductDetailScreen(
                                     modifier = Modifier.padding(horizontal = 8.dp),
                                     style = MaterialTheme.typography.bodyLarge
                                 )
-                                IconButton(
+                                AnimatedIconButton(
                                     onClick = { viewModel.updateCartQuantity(cartItem.productId, cartItem.quantity + 1) },
                                     modifier = Modifier.size(32.dp)
                                 ) {
@@ -164,8 +164,13 @@ fun ProductDetailScreen(
                                 .height(300.dp)
                         ) { page ->
                             AsyncImage(
-                                model = images[page],
+                                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                    .data(images[page])
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = null,
+                                placeholder = ColorPainter(Color.LightGray),
+                                error = ColorPainter(Color.LightGray),
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clickable { zoomedImage = images[page] },
@@ -236,8 +241,11 @@ fun ProductDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(text = "Brand: ${product.brand}", style = MaterialTheme.typography.bodyMedium)
                         Text(text = "Category: ${product.category.replaceFirstChar { it.uppercase() }}", style = MaterialTheme.typography.bodyMedium)
-                        Text(text = "SKU: ${product.sku}", style = MaterialTheme.typography.bodyMedium)
-                        Text(text = "Stock: ${product.stock} units", style = MaterialTheme.typography.bodyMedium)
+                        if (product.stock < 10) {
+                            Text(text = "Hurry, only ${product.stock} left in stock!", style = MaterialTheme.typography.bodyMedium, color = Color.Red)
+                        } else {
+                            Text(text = "In Stock", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                        }
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("Description", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

@@ -24,6 +24,11 @@ import coil.compose.AsyncImage
 import com.yashas.shoplite.domain.model.CartItem
 import com.yashas.shoplite.presentation.cart.components.CartSummary
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
+
+import com.yashas.shoplite.presentation.components.AnimatedIconButton
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
@@ -64,15 +69,20 @@ fun CartScreen(
             }
         }
     ) { padding ->
-        if (state.items.isEmpty()) {
+        if (state.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (state.items.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Your cart is empty", style = MaterialTheme.typography.titleMedium)
             }
         } else {
             LazyColumn(
+                contentPadding = PaddingValues(bottom = padding.calculateBottomPadding()),
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(top = padding.calculateTopPadding())
             ) {
                 items(state.items, key = { it.productId }) { item ->
                     CartItemRow(
@@ -107,10 +117,17 @@ fun CartItemRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = item.imageUrl,
+                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                    .data(item.imageUrl)
+                    .crossfade(true)
+                    .build(),
                 contentDescription = item.name,
-                modifier = Modifier.size(80.dp),
-                contentScale = ContentScale.Crop
+                placeholder = ColorPainter(Color.LightGray),
+                error = ColorPainter(Color.LightGray),
+                modifier = Modifier
+                    .size(80.dp)
+                    .aspectRatio(1f),
+                contentScale = ContentScale.Fit
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -139,7 +156,7 @@ fun CartItemRow(
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
+                    AnimatedIconButton(
                         onClick = { onQuantityChanged(item.quantity - 1) },
                         modifier = Modifier.size(32.dp)
                     ) {
@@ -150,7 +167,7 @@ fun CartItemRow(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    IconButton(
+                    AnimatedIconButton(
                         onClick = { onQuantityChanged(item.quantity + 1) },
                         modifier = Modifier.size(32.dp)
                     ) {
@@ -158,7 +175,7 @@ fun CartItemRow(
                     }
                 }
             }
-            IconButton(onClick = onRemove) {
+            AnimatedIconButton(onClick = onRemove) {
                 Icon(Icons.Default.Delete, contentDescription = "Remove")
             }
         }
