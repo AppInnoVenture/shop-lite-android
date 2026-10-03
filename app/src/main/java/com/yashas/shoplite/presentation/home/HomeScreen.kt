@@ -205,7 +205,7 @@ fun HomeScreen(
                     val coroutineScope = rememberCoroutineScope()
                     
                     LaunchedEffect(state.selectedSortOption) {
-                        gridState.animateScrollToItem(0)
+                        gridState.scrollToItem(0)
                     }
 
                     LazyVerticalGrid(

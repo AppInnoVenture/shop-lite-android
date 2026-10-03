@@ -8,9 +8,7 @@ import com.yashas.shoplite.domain.usecase.cart.AddToCartUseCase
 import com.yashas.shoplite.domain.usecase.cart.GetCartUseCase
 import com.yashas.shoplite.domain.usecase.favorites.GetFavoritesUseCase
 import com.yashas.shoplite.domain.usecase.favorites.ToggleFavoriteUseCase
-import com.yashas.shoplite.domain.usecase.product.GetCategoriesUseCase
 import com.yashas.shoplite.domain.usecase.product.GetProductsUseCase
-import com.yashas.shoplite.domain.usecase.product.SearchProductsUseCase
 import com.yashas.shoplite.domain.usecase.settings.CurrencyUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -30,8 +28,6 @@ enum class SortOption(val displayName: String) {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getProductsUseCase: GetProductsUseCase,
-    private val searchProductsUseCase: SearchProductsUseCase,
-    private val getCategoriesUseCase: GetCategoriesUseCase,
     private val addToCartUseCase: AddToCartUseCase,
     private val getCartUseCase: GetCartUseCase,
     private val getFavoritesUseCase: GetFavoritesUseCase,
@@ -77,15 +73,15 @@ class HomeViewModel @Inject constructor(
     }
 
     init {
-        loadCategories()
-        
         // Setup base products flow from DB
         viewModelScope.launch {
             getProductsUseCase().collect { dbProducts ->
-                if (searchQueryFlow.value.isBlank()) {
-                    fetchedProductsFlow.value = dbProducts
-                }
-                _state.update { it.copy(isLoading = false) }
+                fetchedProductsFlow.value = dbProducts
+                
+                // Derive categories dynamically from local DB
+                val uniqueCategories = dbProducts.map { it.category }.distinct()
+                val allCategories = listOf("All") + uniqueCategories.map { it.replaceFirstChar { char -> char.uppercase() } }
+                _state.update { it.copy(categories = allCategories, isLoading = false) }
             }
         }
         
@@ -101,34 +97,27 @@ class HomeViewModel @Inject constructor(
             _state.update { it.copy(isLoading = false) }
         }
         
-        // Search flow triggering fetch
-        viewModelScope.launch {
-            searchQueryFlow
-                .debounce(400)
-                .distinctUntilChanged()
-                .collect { query ->
-                    if (query.isBlank()) {
-                        // If query is cleared, restore from local DB
-                        val dbProducts = getProductsUseCase().firstOrNull() ?: emptyList()
-                        fetchedProductsFlow.value = dbProducts
-                    } else {
-                        fetchSearchProducts(query)
-                    }
-                }
-        }
-        
-        // Combine fetched products, category filter, and sorting
+        // Combine fetched products, category filter, sorting, and search
         viewModelScope.launch {
             combine(
                 fetchedProductsFlow,
                 selectedCategoryFlow,
-                sortOptionFlow
-            ) { products, category, sortOption ->
+                sortOptionFlow,
+                searchQueryFlow
+            ) { products, category, sortOption, query ->
                 var filtered = products
+                
+                // 1. Search filter by title only
+                if (query.isNotBlank()) {
+                    filtered = filtered.filter { it.name.contains(query, ignoreCase = true) }
+                }
+
+                // 2. Category filter
                 if (category != "All") {
                     filtered = filtered.filter { it.category.equals(category, ignoreCase = true) }
                 }
                 
+                // 3. Sorting
                 filtered = when (sortOption) {
                     SortOption.NONE -> filtered
                     SortOption.RATING -> filtered.sortedByDescending { it.rating }
@@ -147,16 +136,6 @@ class HomeViewModel @Inject constructor(
     private fun getDiscountedPrice(price: Double, discountPercentage: Double): Double {
         return price - (price * (discountPercentage / 100))
     }
-
-    private fun loadCategories() {
-        viewModelScope.launch {
-            val categoriesResult = getCategoriesUseCase()
-            categoriesResult.onSuccess { categories ->
-                val allCategories = listOf("All") + categories.map { it.replaceFirstChar { char -> char.uppercase() } }
-                _state.update { it.copy(categories = allCategories) }
-            }
-        }
-    }
     
     fun refresh() {
         viewModelScope.launch {
@@ -165,21 +144,7 @@ class HomeViewModel @Inject constructor(
             result.onFailure { error ->
                 _state.update { it.copy(error = error.message) }
             }
-            if (searchQueryFlow.value.isNotBlank()) {
-                fetchSearchProducts(searchQueryFlow.value)
-            }
             _state.update { it.copy(isLoading = false) }
-        }
-    }
-
-    private suspend fun fetchSearchProducts(query: String) {
-        _state.update { it.copy(isLoading = true, error = null) }
-        val result = searchProductsUseCase(query)
-        result.onSuccess { products ->
-            fetchedProductsFlow.value = products
-            _state.update { it.copy(isLoading = false) }
-        }.onFailure { error ->
-            _state.update { it.copy(error = error.message ?: "An unexpected error occurred", isLoading = false) }
         }
     }
 
