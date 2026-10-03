@@ -1,8 +1,9 @@
 package com.yashas.shoplite.di
 
 import com.yashas.shoplite.data.local.AppDatabase
+import com.yashas.shoplite.data.local.CartRepositoryImpl
 import com.yashas.shoplite.data.remote.DummyJsonApi
-import com.yashas.shoplite.data.repository.CartRepositoryImpl
+//import com.yashas.shoplite.data.repository.CartRepositoryImpl
 import com.yashas.shoplite.data.repository.ProductRepositoryImpl
 import com.yashas.shoplite.domain.repository.CartRepository
 import com.yashas.shoplite.domain.repository.ProductRepository
