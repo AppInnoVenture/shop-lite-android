@@ -8,7 +8,10 @@ import com.yashas.shoplite.domain.usecase.cart.AddToCartUseCase
 import com.yashas.shoplite.domain.usecase.cart.GetCartUseCase
 import com.yashas.shoplite.domain.usecase.favorites.GetFavoritesUseCase
 import com.yashas.shoplite.domain.usecase.favorites.ToggleFavoriteUseCase
+import com.yashas.shoplite.domain.usecase.product.GetCategoriesUseCase
+import com.yashas.shoplite.domain.usecase.product.GetProductsByCategoryUseCase
 import com.yashas.shoplite.domain.usecase.product.GetProductsUseCase
+import com.yashas.shoplite.domain.usecase.product.SearchProductsUseCase
 import com.yashas.shoplite.domain.usecase.settings.CurrencyUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -28,6 +31,9 @@ enum class SortOption(val displayName: String) {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getProductsUseCase: GetProductsUseCase,
+    private val getCategoriesUseCase: GetCategoriesUseCase,
+    private val searchProductsUseCase: SearchProductsUseCase,
+    private val getProductsByCategoryUseCase: GetProductsByCategoryUseCase,
     private val addToCartUseCase: AddToCartUseCase,
     private val getCartUseCase: GetCartUseCase,
     private val getFavoritesUseCase: GetFavoritesUseCase,
@@ -107,16 +113,16 @@ class HomeViewModel @Inject constructor(
             ) { products, category, sortOption, query ->
                 var filtered = products
                 
-                // 1. Search filter by title only
-                if (query.isNotBlank()) {
-                    filtered = filtered.filter { it.name.contains(query, ignoreCase = true) }
-                }
-
-                // 2. Category filter
+                // 1. Category filter
                 if (category != "All") {
                     filtered = filtered.filter { it.category.equals(category, ignoreCase = true) }
                 }
                 
+                // 2. Search filter by title only (API might return description matches)
+                if (query.isNotBlank()) {
+                    filtered = filtered.filter { it.name.contains(query, ignoreCase = true) }
+                }
+
                 // 3. Sorting
                 filtered = when (sortOption) {
                     SortOption.NONE -> filtered
@@ -131,6 +137,45 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(products = displayProducts) }
             }
         }
+        
+        // Search flow triggering fetch
+        viewModelScope.launch {
+            searchQueryFlow
+                .debounce(400)
+                .distinctUntilChanged()
+                .collect { query ->
+                    fetchData(query, selectedCategoryFlow.value)
+                }
+        }
+        
+        // Category flow triggering fetch
+        viewModelScope.launch {
+            selectedCategoryFlow
+                .drop(1) // Skip initial value
+                .collect { category ->
+                    fetchData("", category) // Empty query on new category
+                }
+        }
+    }
+    
+    private suspend fun fetchData(query: String, category: String) {
+        _state.update { it.copy(isLoading = true, error = null) }
+        val result = if (query.isNotBlank()) {
+            searchProductsUseCase(query)
+        } else if (category != "All") {
+            getProductsByCategoryUseCase(category)
+        } else {
+            getProductsUseCase.sync(forceRefresh = false)
+            // since getProductsUseCase.sync returns Result<Unit>, we just fetch from DB directly
+            Result.success(fetchedProductsFlow.value)
+        }
+        
+        result.onSuccess { products ->
+            fetchedProductsFlow.value = products
+            _state.update { it.copy(isLoading = false) }
+        }.onFailure { error ->
+            _state.update { it.copy(error = error.message ?: "An unexpected error occurred", isLoading = false) }
+        }
     }
     
     private fun getDiscountedPrice(price: Double, discountPercentage: Double): Double {
@@ -144,7 +189,7 @@ class HomeViewModel @Inject constructor(
             result.onFailure { error ->
                 _state.update { it.copy(error = error.message) }
             }
-            _state.update { it.copy(isLoading = false) }
+            fetchData(searchQueryFlow.value, selectedCategoryFlow.value)
         }
     }
 

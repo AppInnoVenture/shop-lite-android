@@ -169,8 +169,8 @@ fun ProductDetailScreen(
                                     .crossfade(true)
                                     .build(),
                                 contentDescription = null,
-                                placeholder = ColorPainter(Color.LightGray),
-                                error = ColorPainter(Color.LightGray),
+                                placeholder = androidx.compose.ui.graphics.painter.ColorPainter(Color.LightGray),
+                                error = androidx.compose.ui.res.painterResource(com.yashas.shoplite.R.drawable.baseline_image_not_available_24),
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clickable { zoomedImage = images[page] },

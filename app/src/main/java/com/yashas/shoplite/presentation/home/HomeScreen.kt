@@ -66,6 +66,26 @@ fun HomeScreen(
     
     val pullToRefreshState = rememberPullToRefreshState()
     var isRefreshing by remember { mutableStateOf(false) }
+    
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val coroutineScope = rememberCoroutineScope()
+    
+    var previousQuery by rememberSaveable { mutableStateOf(state.searchQuery) }
+    var previousCategory by rememberSaveable { mutableStateOf(state.selectedCategory) }
+    var previousSort by rememberSaveable { mutableStateOf(state.selectedSortOption) }
+
+    LaunchedEffect(state.products) {
+        if (previousQuery != state.searchQuery || 
+            previousCategory != state.selectedCategory || 
+            previousSort != state.selectedSortOption) {
+            
+            gridState.scrollToItem(0)
+            
+            previousQuery = state.searchQuery
+            previousCategory = state.selectedCategory
+            previousSort = state.selectedSortOption
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -229,26 +249,6 @@ fun HomeScreen(
                     state = pullToRefreshState,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
-                    val coroutineScope = rememberCoroutineScope()
-                    
-                    var previousQuery by rememberSaveable { mutableStateOf(state.searchQuery) }
-                    var previousCategory by rememberSaveable { mutableStateOf(state.selectedCategory) }
-                    var previousSort by rememberSaveable { mutableStateOf(state.selectedSortOption) }
-
-                    LaunchedEffect(state.products) {
-                        if (previousQuery != state.searchQuery || 
-                            previousCategory != state.selectedCategory || 
-                            previousSort != state.selectedSortOption) {
-                            
-                            gridState.animateScrollToItem(0)
-                            
-                            previousQuery = state.searchQuery
-                            previousCategory = state.selectedCategory
-                            previousSort = state.selectedSortOption
-                        }
-                    }
-
                     LazyVerticalGrid(
                         state = gridState,
                         columns = GridCells.Fixed(2),
@@ -331,8 +331,8 @@ fun ProductCard(
                         .crossfade(true)
                         .build(),
                     contentDescription = product.name,
-                    placeholder = ColorPainter(Color.LightGray),
-                    error = ColorPainter(Color.LightGray),
+                    placeholder = androidx.compose.ui.graphics.painter.ColorPainter(Color.LightGray),
+                    error = androidx.compose.ui.res.painterResource(com.yashas.shoplite.R.drawable.baseline_image_not_available_24),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(150.dp),

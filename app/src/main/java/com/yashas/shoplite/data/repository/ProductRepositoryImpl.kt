@@ -99,9 +99,12 @@ class ProductRepositoryImpl @Inject constructor(
     override suspend fun searchProducts(query: String): Result<List<Product>> {
         return try {
             val response = api.searchProducts(query)
-            Result.success(response.products.map { it.toEntity(System.currentTimeMillis()).toDomain() })
+            val entities = response.products.map { it.toEntity(System.currentTimeMillis()) }
+            productDao.insertAll(entities)
+            Result.success(entities.map { it.toDomain() })
         } catch (e: Exception) {
-            Result.failure(e)
+            val cached = productDao.getAllProducts().filter { it.name.contains(query, ignoreCase = true) }
+            Result.success(cached.map { it.toDomain() })
         }
     }
     
@@ -117,9 +120,12 @@ class ProductRepositoryImpl @Inject constructor(
     override suspend fun getProductsByCategory(category: String): Result<List<Product>> {
         return try {
             val response = api.getProductsByCategory(category)
-            Result.success(response.products.map { it.toEntity(System.currentTimeMillis()).toDomain() })
+            val entities = response.products.map { it.toEntity(System.currentTimeMillis()) }
+            productDao.insertAll(entities)
+            Result.success(entities.map { it.toDomain() })
         } catch (e: Exception) {
-            Result.failure(e)
+            val cached = productDao.getAllProducts().filter { it.category.equals(category, ignoreCase = true) }
+            Result.success(cached.map { it.toDomain() })
         }
     }
 
