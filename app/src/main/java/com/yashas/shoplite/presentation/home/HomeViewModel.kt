@@ -18,6 +18,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 enum class SortOption(val displayName: String) {
     NONE("None"),
@@ -80,31 +81,35 @@ class HomeViewModel @Inject constructor(
 
     init {
         val debouncedSearchQuery = searchQueryFlow
-            .debounce(600)
+            .debounce(600.milliseconds)
             .distinctUntilChanged()
 
-        // Setup base products flow from DB
         viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            
+            val cacheValid = getProductsUseCase.isCacheValid()
+            val networkAvailable = isNetworkAvailable.value
+            
+            if (!cacheValid && networkAvailable) {
+                val result = getProductsUseCase.sync(forceRefresh = true)
+                if (result.isFailure && fetchedProductsFlow.value.isEmpty()) {
+                    _state.update { it.copy(error = result.exceptionOrNull()?.message) }
+                }
+            } else {
+                launch { 
+                    getProductsUseCase.sync(forceRefresh = false) 
+                }
+            }
+            
+            // Now start observing DB
             getProductsUseCase().collect { dbProducts ->
                 fetchedProductsFlow.value = dbProducts
                 
                 // Derive categories dynamically from local DB
-                val uniqueCategories = dbProducts.map { it.category }.distinct()
+                val uniqueCategories = dbProducts.map { it.category }.distinct().sorted()
                 val allCategories = listOf("All") + uniqueCategories.map { it.replaceFirstChar { char -> char.uppercase() } }
-                _state.update { it.copy(categories = allCategories, isLoading = false) }
+                _state.update { it.copy(categories = allCategories, isDbInitialized = true, isLoading = false) }
             }
-        }
-        
-        // Initial sync
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-            val result = getProductsUseCase.sync(forceRefresh = false)
-            result.onFailure { error ->
-                if (fetchedProductsFlow.value.isEmpty()) {
-                    _state.update { it.copy(error = error.message) }
-                }
-            }
-            _state.update { it.copy(isLoading = false) }
         }
         
         // Combine fetched products, category filter, sorting, and search
@@ -224,6 +229,7 @@ class HomeViewModel @Inject constructor(
 data class HomeState(
     val products: List<Product> = emptyList(),
     val isLoading: Boolean = true,
+    val isDbInitialized: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
     val categories: List<String> = listOf("All"),

@@ -12,6 +12,10 @@ class GetProductsUseCase @Inject constructor(
         return repository.getProductsFlow()
     }
     
+    suspend fun isCacheValid(): Boolean {
+        return repository.isCacheValid()
+    }
+    
     suspend fun sync(forceRefresh: Boolean = false): Result<Unit> {
         return repository.syncProducts(forceRefresh)
     }

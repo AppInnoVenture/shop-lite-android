@@ -28,22 +28,24 @@ class ProductRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun isCacheValid(): Boolean {
+        val cachedEntities = productDao.getAllProducts()
+        if (cachedEntities.isEmpty()) return false
+        val currentTime = System.currentTimeMillis()
+        return (currentTime - cachedEntities.first().lastUpdated < CACHE_EXPIRY_MS)
+    }
+
     override suspend fun syncProducts(forceRefresh: Boolean): Result<Unit> {
         return try {
-            val cachedEntities = productDao.getAllProducts()
-            val currentTime = System.currentTimeMillis()
-            
-            // Check if cache is valid
-            if (!forceRefresh && cachedEntities.isNotEmpty() && (currentTime - cachedEntities.first().lastUpdated < CACHE_EXPIRY_MS)) {
+            if (!forceRefresh && isCacheValid()) {
                 return Result.success(Unit)
             }
 
             // Fetch from network
             val response = api.getProducts()
-            val entities = response.products.map { it.toEntity(currentTime) }
+            val entities = response.products.map { it.toEntity(System.currentTimeMillis()) }
             
-            // Update cache
-            productDao.clearAll()
+            // Update cache securely without clearing it completely
             productDao.insertAll(entities)
             
             Result.success(Unit)
@@ -54,20 +56,16 @@ class ProductRepositoryImpl @Inject constructor(
 
     override suspend fun getProducts(forceRefresh: Boolean): Result<List<Product>> {
         return try {
-            val cachedEntities = productDao.getAllProducts()
-            val currentTime = System.currentTimeMillis()
-            
-            // Check if cache is valid
-            if (!forceRefresh && cachedEntities.isNotEmpty() && (currentTime - cachedEntities.first().lastUpdated < CACHE_EXPIRY_MS)) {
+            if (!forceRefresh && isCacheValid()) {
+                val cachedEntities = productDao.getAllProducts()
                 return Result.success(cachedEntities.map { it.toDomain() })
             }
 
             // Fetch from network
             val response = api.getProducts()
-            val entities = response.products.map { it.toEntity(currentTime) }
+            val entities = response.products.map { it.toEntity(System.currentTimeMillis()) }
             
-            // Update cache
-            productDao.clearAll()
+            // Update cache securely without clearing it completely
             productDao.insertAll(entities)
             
             Result.success(entities.map { it.toDomain() })

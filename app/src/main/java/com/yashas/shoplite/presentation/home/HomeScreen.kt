@@ -42,6 +42,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 
 import androidx.compose.material.icons.filled.Clear
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -70,7 +72,10 @@ fun HomeScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     
     val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val categoryListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     
     var previousQuery by rememberSaveable { mutableStateOf(state.searchQuery) }
     var previousCategory by rememberSaveable { mutableStateOf(state.selectedCategory) }
@@ -90,9 +95,11 @@ fun HomeScreen(
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
                 title = { Text("ShopLite") },
+                scrollBehavior = scrollBehavior,
                 actions = {
                     IconButton(onClick = onNavigateToFavorites) {
                         Icon(Icons.Default.Favorite, contentDescription = "Favorites")
@@ -138,7 +145,7 @@ fun HomeScreen(
                 )
             //    .navigationBarsPadding()
         ) {
-            // Search Bar
+            // Search Bar (Pinned)
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = viewModel::onSearchQueryChanged,
@@ -158,83 +165,12 @@ fun HomeScreen(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            // Categories
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(state.categories) { category ->
-                    FilterChip(
-                        selected = state.selectedCategory == category,
-                        onClick = { viewModel.onCategorySelected(category) },
-                        label = { Text(category) }
-                    )
-                }
-            }
-            
-            // Sort Options
-            var expanded by remember { mutableStateOf(false) }
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                OutlinedButton(onClick = { expanded = true }) {
-                    Text("Sort By: ${state.selectedSortOption.displayName}")
-                }
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    SortOption.entries.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(option.displayName) },
-                            onClick = {
-                                viewModel.onSortOptionSelected(option)
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            // Offline indicator
-            var dismissOfflineBanner by rememberSaveable { mutableStateOf(false) }
-            LaunchedEffect(isNetworkAvailable) {
-                if (isNetworkAvailable) dismissOfflineBanner = false
-            }
-
-            AnimatedVisibility(visible = !isNetworkAvailable && !dismissOfflineBanner) {
-                val dismissState = rememberSwipeToDismissBoxState()
-
-                // Observe the swipe state to trigger your dismissal logic
-                LaunchedEffect(dismissState.currentValue) {
-                    if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
-                        dismissOfflineBanner = true
-                    }
-                }
-
-                SwipeToDismissBox(
-                    state = dismissState,
-                    backgroundContent = { Box(Modifier.fillMaxSize().background(Color.Transparent)) },
-                    content = {
-                        Surface(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "You are offline. Showing cached products. (Swipe to dismiss)",
-                                modifier = Modifier.padding(8.dp),
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                )
-            }
-            
             // Content
             if (state.isLoading && state.products.isEmpty() && !isRefreshing) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (!isNetworkAvailable && state.products.isEmpty()) {
+            } else if (!isNetworkAvailable && state.products.isEmpty() && state.isDbInitialized) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Please enable internet connection", style = MaterialTheme.typography.titleMedium)
@@ -269,13 +205,89 @@ fun HomeScreen(
                         contentPadding = PaddingValues(
                             start = 16.dp, 
                             end = 16.dp, 
-                            top = 16.dp, 
+                            top = 0.dp, 
                             bottom = padding.calculateBottomPadding() + 80.dp
                         ),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                            Column {
+                                // Categories
+                                LazyRow(
+                                    state = categoryListState,
+                                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    items(state.categories, key = { it }) { category ->
+                                        FilterChip(
+                                            selected = state.selectedCategory == category,
+                                            onClick = { viewModel.onCategorySelected(category) },
+                                            label = { Text(category) }
+                                        )
+                                    }
+                                }
+                                
+                                // Sort Options
+                                var expanded by remember { mutableStateOf(false) }
+                                Box(modifier = Modifier.padding(vertical = 4.dp)) {
+                                    OutlinedButton(onClick = { expanded = true }) {
+                                        Text("Sort By: ${state.selectedSortOption.displayName}")
+                                    }
+                                    DropdownMenu(
+                                        expanded = expanded,
+                                        onDismissRequest = { expanded = false }
+                                    ) {
+                                        SortOption.entries.forEach { option ->
+                                            DropdownMenuItem(
+                                                text = { Text(option.displayName) },
+                                                onClick = {
+                                                    viewModel.onSortOptionSelected(option)
+                                                    expanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                                
+                                // Offline indicator
+                                var dismissOfflineBanner by rememberSaveable { mutableStateOf(false) }
+                                LaunchedEffect(isNetworkAvailable) {
+                                    if (isNetworkAvailable) dismissOfflineBanner = false
+                                }
+
+                                AnimatedVisibility(visible = !isNetworkAvailable && !dismissOfflineBanner) {
+                                    val dismissState = rememberSwipeToDismissBoxState()
+                                    LaunchedEffect(dismissState.currentValue) {
+                                        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                                            dismissOfflineBanner = true
+                                        }
+                                    }
+                                    SwipeToDismissBox(
+                                        state = dismissState,
+                                        backgroundContent = { Box(Modifier.fillMaxWidth().background(Color.Transparent)) },
+                                        content = {
+                                            Surface(
+                                                color = MaterialTheme.colorScheme.errorContainer,
+                                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text(
+                                                    text = "You are offline. Showing cached products. (Swipe to dismiss)",
+                                                    modifier = Modifier.padding(8.dp),
+                                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+
                         items(state.products, key = { it.id }) { product ->
                             ProductCard(
                                 product = product,
