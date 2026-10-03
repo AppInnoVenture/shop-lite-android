@@ -167,15 +167,15 @@ fun HomeScreen(
             }
 
             AnimatedVisibility(visible = !isNetworkAvailable && !dismissOfflineBanner) {
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = {
-                        if (it != SwipeToDismissBoxValue.Settled) {
-                            dismissOfflineBanner = true
-                            true
-                        } else false
+                val dismissState = rememberSwipeToDismissBoxState()
+
+                // Observe the swipe state to trigger your dismissal logic
+                LaunchedEffect(dismissState.currentValue) {
+                    if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                        dismissOfflineBanner = true
                     }
-                )
-                
+                }
+
                 SwipeToDismissBox(
                     state = dismissState,
                     backgroundContent = { Box(Modifier.fillMaxSize().background(Color.Transparent)) },
