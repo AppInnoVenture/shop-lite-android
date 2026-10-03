@@ -5,11 +5,11 @@ import android.content.Context
 import androidx.room.Room
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.yashas.shoplite.data.local.AppDatabase
-import com.yashas.shoplite.data.local.CartDao
-import com.yashas.shoplite.data.local.FavoriteDao
-import com.yashas.shoplite.data.local.ProductDao
-import com.yashas.shoplite.data.remote.DummyJsonApi
+import com.yashas.shoplite.data.local.ShopLiteDatabase
+import com.yashas.shoplite.data.local.dao.CartDao
+import com.yashas.shoplite.data.local.dao.FavoriteDao
+import com.yashas.shoplite.data.local.dao.ProductDao
+import com.yashas.shoplite.data.remote.CatalogApiService
 import com.yashas.shoplite.data.util.NetworkConnectivityManager
 import dagger.Module
 import dagger.Provides
@@ -34,7 +34,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideApi(@ApplicationContext context: Context, gson: Gson): DummyJsonApi {
+    fun provideApi(@ApplicationContext context: Context, gson: Gson): CatalogApiService {
         val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
         
         // 50 MB Cache
@@ -51,30 +51,30 @@ object AppModule {
             .client(client)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
-            .create(DummyJsonApi::class.java)
+            .create(CatalogApiService::class.java)
     }
 
     @Provides
     @Singleton
-    fun provideDatabase(app: Application): AppDatabase {
+    fun provideDatabase(app: Application): ShopLiteDatabase {
         return Room.databaseBuilder(
                 app,
-                AppDatabase::class.java,
+                ShopLiteDatabase::class.java,
                 "shoplite_db"
             ).fallbackToDestructiveMigration(false).build()
     }
 
     @Provides
     @Singleton
-    fun provideCartDao(db: AppDatabase): CartDao = db.cartDao
+    fun provideCartDao(db: ShopLiteDatabase): CartDao = db.cartDao
 
     @Provides
     @Singleton
-    fun provideProductDao(db: AppDatabase): ProductDao = db.productDao
+    fun provideProductDao(db: ShopLiteDatabase): ProductDao = db.productDao
 
     @Provides
     @Singleton
-    fun provideFavoriteDao(db: AppDatabase): FavoriteDao = db.favoriteDao
+    fun provideFavoriteDao(db: ShopLiteDatabase): FavoriteDao = db.favoriteDao
     
     @Provides
     @Singleton

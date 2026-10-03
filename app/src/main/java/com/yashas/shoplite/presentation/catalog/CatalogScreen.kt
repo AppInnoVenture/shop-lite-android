@@ -1,4 +1,4 @@
-package com.yashas.shoplite.presentation.home
+package com.yashas.shoplite.presentation.catalog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,12 +46,12 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
+fun CatalogScreen(
     onNavigateToProductDetails: (String) -> Unit,
     onNavigateToCart: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToFavorites: () -> Unit,
-    viewModel: HomeViewModel = hiltViewModel(
+    onNavigateToWishlist: () -> Unit,
+    viewModel: CatalogViewModel = hiltViewModel(
         checkNotNull(
             LocalViewModelStoreOwner.current
         ) {
@@ -62,7 +62,7 @@ fun HomeScreen(
     val state by viewModel.state.collectAsState()
     val isNetworkAvailable by viewModel.isNetworkAvailable.collectAsState()
     val cartItems by viewModel.cartItems.collectAsState()
-    val favoriteIds by viewModel.favoriteIds.collectAsState()
+    val wishlistIds by viewModel.wishlistIds.collectAsState()
     val currency by viewModel.currency.collectAsState()
     
     val cartItemCount = cartItems.sumOf { it.quantity }
@@ -101,8 +101,8 @@ fun HomeScreen(
                 title = { Text("ShopLite") },
                 scrollBehavior = scrollBehavior,
                 actions = {
-                    IconButton(onClick = onNavigateToFavorites) {
-                        Icon(Icons.Default.Favorite, contentDescription = "Favorites")
+                    IconButton(onClick = onNavigateToWishlist) {
+                        Icon(Icons.Default.Favorite, contentDescription = "Wishlist")
                     }
                     IconButton(onClick = onNavigateToCart) {
                         BadgedBox(
@@ -291,7 +291,7 @@ fun HomeScreen(
                         items(state.products, key = { it.id }) { product ->
                             ProductCard(
                                 product = product,
-                                isFavorite = favoriteIds.contains(product.id),
+                                isFavorite = wishlistIds.contains(product.id),
                                 currency = currency,
                                 formatPrice = viewModel::formatPrice,
                                 onClick = { onNavigateToProductDetails(product.id) },

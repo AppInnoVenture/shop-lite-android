@@ -1,27 +1,27 @@
 package com.yashas.shoplite.data.repository
 
-import com.yashas.shoplite.data.local.FavoriteDao
-import com.yashas.shoplite.data.local.FavoriteEntity
+import com.yashas.shoplite.data.local.dao.WishlistDao
+import com.yashas.shoplite.data.local.entity.WishlistEntity
 import com.yashas.shoplite.domain.model.Product
-import com.yashas.shoplite.domain.repository.FavoritesRepository
+import com.yashas.shoplite.domain.repository.WishlistRepository
 import com.yashas.shoplite.domain.repository.ProductRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
-class FavoritesRepositoryImpl @Inject constructor(
-    private val dao: FavoriteDao,
+class WishlistRepositoryImpl @Inject constructor(
+    private val dao: WishlistDao,
     private val productRepository: ProductRepository
-) : FavoritesRepository {
+) : WishlistRepository {
 
-    override fun getFavoritesIds(): Flow<List<String>> {
-        return dao.getFavorites().map { entities ->
+    override fun getWishlistIds(): Flow<List<String>> {
+        return dao.getWishlistItems().map { entities ->
             entities.map { it.productId }
         }
     }
 
-    override fun getFavoriteProducts(): Flow<List<Product>> {
-        return dao.getFavorites().map { entities ->
+    override fun getWishlistProducts(): Flow<List<Product>> {
+        return dao.getWishlistItems().map { entities ->
             val products = mutableListOf<Product>()
             for (entity in entities) {
                 // Fetch product from local cache (already populated by ProductRepository)
@@ -32,14 +32,14 @@ class FavoritesRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun toggleFavorite(product: Product): Result<Boolean> {
+    override suspend fun toggleWishlist(product: Product): Result<Boolean> {
         return try {
-            val existing = dao.getFavoriteById(product.id)
+            val existing = dao.getWishlistItemById(product.id)
             if (existing != null) {
-                dao.removeFavorite(existing)
+                dao.removeWishlistItem(existing)
                 Result.success(false) // Removed
             } else {
-                dao.insertFavorite(FavoriteEntity(product.id))
+                dao.insertWishlistItem(WishlistEntity(product.id))
                 Result.success(true) // Added
             }
         } catch (e: Exception) {

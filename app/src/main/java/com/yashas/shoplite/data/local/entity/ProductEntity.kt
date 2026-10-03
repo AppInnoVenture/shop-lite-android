@@ -1,14 +1,18 @@
-package com.yashas.shoplite.domain.model
+package com.yashas.shoplite.data.local.entity
 
-data class Product(
-    val id: String,
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "products")
+data class ProductEntity(
+    @PrimaryKey val id: String,
     val category: String,
     val name: String,
     val rating: Double,
     val price: Double,
     val discountPercentage: Double,
     val imageUrl: String,
-    val images: List<String>,
+    val imagesJson: String,
     val description: String,
     val stock: Int,
     val brand: String,
@@ -16,6 +20,7 @@ data class Product(
     val warrantyInformation: String,
     val shippingInformation: String,
     val returnPolicy: String,
-    val dimensions: Dimensions,
-    val reviews: List<Review>
+    val dimensionsJson: String,
+    val reviewsJson: String,
+    val lastUpdated: Long
 )

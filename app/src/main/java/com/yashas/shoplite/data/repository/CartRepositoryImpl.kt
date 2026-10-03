@@ -1,7 +1,7 @@
 package com.yashas.shoplite.data.repository
 
-import com.yashas.shoplite.data.local.CartDao
-import com.yashas.shoplite.data.local.CartItemEntity
+import com.yashas.shoplite.data.local.dao.CartDao
+import com.yashas.shoplite.data.local.entity.CartItemEntity
 import com.yashas.shoplite.domain.model.CartItem
 import com.yashas.shoplite.domain.model.Product
 import com.yashas.shoplite.domain.repository.CartRepository

@@ -2,9 +2,9 @@ package com.yashas.shoplite.data.repository
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.yashas.shoplite.data.local.ProductDao
-import com.yashas.shoplite.data.local.ProductEntity
-import com.yashas.shoplite.data.remote.DummyJsonApi
+import com.yashas.shoplite.data.local.dao.ProductDao
+import com.yashas.shoplite.data.local.entity.ProductEntity
+import com.yashas.shoplite.data.remote.CatalogApiService
 import com.yashas.shoplite.data.remote.ProductDto
 import com.yashas.shoplite.domain.model.Dimensions
 import com.yashas.shoplite.domain.model.Product
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class ProductRepositoryImpl @Inject constructor(
-    private val api: DummyJsonApi,
+    private val api: CatalogApiService,
     private val productDao: ProductDao,
     private val gson: Gson
 ) : ProductRepository {

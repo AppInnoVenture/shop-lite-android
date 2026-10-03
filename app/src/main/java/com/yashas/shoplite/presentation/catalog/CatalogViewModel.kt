@@ -1,4 +1,4 @@
-package com.yashas.shoplite.presentation.home
+package com.yashas.shoplite.presentation.catalog
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -6,8 +6,8 @@ import com.yashas.shoplite.data.util.NetworkConnectivityManager
 import com.yashas.shoplite.domain.model.Product
 import com.yashas.shoplite.domain.usecase.cart.AddToCartUseCase
 import com.yashas.shoplite.domain.usecase.cart.GetCartUseCase
-import com.yashas.shoplite.domain.usecase.favorites.GetFavoritesUseCase
-import com.yashas.shoplite.domain.usecase.favorites.ToggleFavoriteUseCase
+import com.yashas.shoplite.domain.usecase.wishlist.GetWishlistUseCase
+import com.yashas.shoplite.domain.usecase.wishlist.ToggleWishlistUseCase
 import com.yashas.shoplite.domain.usecase.product.GetCategoriesUseCase
 import com.yashas.shoplite.domain.usecase.product.GetProductsByCategoryUseCase
 import com.yashas.shoplite.domain.usecase.product.GetProductsUseCase
@@ -30,20 +30,20 @@ enum class SortOption(val displayName: String) {
 
 @OptIn(FlowPreview::class)
 @HiltViewModel
-class HomeViewModel @Inject constructor(
+class CatalogViewModel @Inject constructor(
     private val getProductsUseCase: GetProductsUseCase,
     private val getCategoriesUseCase: GetCategoriesUseCase,
     private val searchProductsUseCase: SearchProductsUseCase,
     private val getProductsByCategoryUseCase: GetProductsByCategoryUseCase,
     private val addToCartUseCase: AddToCartUseCase,
     private val getCartUseCase: GetCartUseCase,
-    private val getFavoritesUseCase: GetFavoritesUseCase,
-    private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
+    private val getWishlistUseCase: GetWishlistUseCase,
+    private val toggleWishlistUseCase: ToggleWishlistUseCase,
     private val currencyUseCase: CurrencyUseCase,
     networkConnectivityManager: NetworkConnectivityManager
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(HomeState())
+    private val _state = MutableStateFlow(CatalogState())
     val state = _state.asStateFlow()
 
     private val searchQueryFlow = MutableStateFlow("")
@@ -63,7 +63,7 @@ class HomeViewModel @Inject constructor(
         initialValue = emptyList()
     )
     
-    val favoriteIds = getFavoritesUseCase.getIds().stateIn(
+    val wishlistIds = getWishlistUseCase.getIds().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
@@ -221,12 +221,12 @@ class HomeViewModel @Inject constructor(
     
     fun toggleFavorite(product: Product) {
         viewModelScope.launch {
-            toggleFavoriteUseCase(product)
+            toggleWishlistUseCase(product)
         }
     }
 }
 
-data class HomeState(
+data class CatalogState(
     val products: List<Product> = emptyList(),
     val isLoading: Boolean = true,
     val isDbInitialized: Boolean = false,
