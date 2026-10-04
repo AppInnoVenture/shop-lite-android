@@ -70,6 +70,7 @@ fun CatalogScreen(
     
     val pullToRefreshState = rememberPullToRefreshState()
     var isRefreshing by remember { mutableStateOf(false) }
+    var dismissOfflineBanner by rememberSaveable { mutableStateOf(false) }
     
     val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val categoryListState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -166,32 +167,43 @@ fun CatalogScreen(
             )
 
             // Content
-            if (state.isLoading && state.products.isEmpty() && !isRefreshing) {
+            if (!state.isDbInitialized || (state.isLoading && state.products.isEmpty() && !isRefreshing)) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (!isNetworkAvailable && state.products.isEmpty() && state.isDbInitialized) {
+            } else if (state.products.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Please enable internet connection", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.refresh() }) {
-                            Text("Retry")
+                    if (!isNetworkAvailable) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Please enable internet connection", style = MaterialTheme.typography.titleMedium)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { viewModel.refresh() }) {
+                                Text("Retry")
+                            }
                         }
+                    } else if (state.error != null) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = state.error ?: "Failed to load products. Please try again.",
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { viewModel.refresh() }) {
+                                Text("Retry")
+                            }
+                        }
+                    } else if (state.searchQuery.isNotEmpty()) {
+                        Text("No products found matching '${state.searchQuery}'")
+                    } else {
+                        Text("No products available.")
                     }
-                }
-            } else if (state.error != null && state.products.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(state.error ?: "Unknown error", color = MaterialTheme.colorScheme.error)
-                }
-            } else if (state.products.isEmpty() && state.searchQuery.isNotEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No products found matching '${state.searchQuery}'")
                 }
             } else {
                 PullToRefreshBox(
                     isRefreshing = state.isLoading,
                     onRefresh = { 
+                        dismissOfflineBanner = false
                         isRefreshing = true
                         viewModel.refresh()
                         isRefreshing = false // Note: Actual implementation should track when loading completes
@@ -253,7 +265,6 @@ fun CatalogScreen(
                                 }
                                 
                                 // Offline indicator
-                                var dismissOfflineBanner by rememberSaveable { mutableStateOf(false) }
                                 LaunchedEffect(isNetworkAvailable) {
                                     if (isNetworkAvailable) dismissOfflineBanner = false
                                 }

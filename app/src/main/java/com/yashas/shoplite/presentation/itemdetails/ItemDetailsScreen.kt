@@ -33,8 +33,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Close
-
-import androidx.compose.ui.graphics.painter.ColorPainter
 import com.yashas.shoplite.presentation.components.AnimatedIconButton
 
 @OptIn(ExperimentalMaterial3Api::class)

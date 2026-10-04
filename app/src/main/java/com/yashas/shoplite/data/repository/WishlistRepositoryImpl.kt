@@ -23,9 +23,9 @@ class WishlistRepositoryImpl @Inject constructor(
     override fun getWishlistProducts(): Flow<List<Product>> {
         return dao.getWishlistItems().map { entities ->
             val products = mutableListOf<Product>()
-            for (entity in entities) {
+            for ((productId) in entities) {
                 // Fetch product from local cache (already populated by ProductRepository)
-                val result = productRepository.getProductById(entity.productId)
+                val result = productRepository.getProductById(productId)
                 result.getOrNull()?.let { products.add(it) }
             }
             products

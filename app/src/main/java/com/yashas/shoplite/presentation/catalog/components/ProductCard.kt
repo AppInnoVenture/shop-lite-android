@@ -1,4 +1,4 @@
-package com.yashas.shoplite.presentation.home.components
+package com.yashas.shoplite.presentation.catalog.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

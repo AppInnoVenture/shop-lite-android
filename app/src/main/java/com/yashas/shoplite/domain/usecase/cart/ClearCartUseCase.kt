@@ -7,7 +7,6 @@ class ClearCartUseCase @Inject constructor(
     private val repository: CartRepository
 ) {
     suspend operator fun invoke(): Result<Unit> {
-        // if (userId.isBlank()) return Result.failure(IllegalArgumentException("User ID cannot be empty"))
         return repository.clearCart()
     }
 }

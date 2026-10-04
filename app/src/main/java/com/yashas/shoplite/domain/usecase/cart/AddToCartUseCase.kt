@@ -8,7 +8,6 @@ class AddToCartUseCase @Inject constructor(
     private val repository: CartRepository
 ) {
     suspend operator fun invoke(product: Product, quantity: Int = 1): Result<Unit> {
-      //  if (userId.isBlank()) return Result.failure(IllegalArgumentException("User must be logged in"))
         return repository.addToCart(product, quantity)
     }
 }
