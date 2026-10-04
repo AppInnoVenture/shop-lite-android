@@ -33,11 +33,12 @@ class CartRepositoryImpl @Inject constructor(
             if (existingItem != null) {
                 dao.updateQuantity(product.id, existingItem.quantity + quantity)
             } else {
+                val discountedPrice = product.price - (product.price * (product.discountPercentage / 100))
                 dao.insertOrUpdate(
                     CartItemEntity(
                         productId = product.id, 
                         name = product.name, 
-                        price = product.price, 
+                        price = discountedPrice, 
                         imageUrl = product.imageUrl, 
                         quantity = quantity
                     )

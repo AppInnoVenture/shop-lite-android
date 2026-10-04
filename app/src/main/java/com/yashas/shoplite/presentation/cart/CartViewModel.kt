@@ -32,7 +32,7 @@ class CartViewModel @Inject constructor(
                     subtotal += item.price * item.quantity
                     item
                 }
-                val deliveryFee = if (subtotal > 0) 10.0 else 0.0
+                val deliveryFee = if (subtotal > 0) 0.99 else 0.0
                 _state.value = CartState(
                     items = cartItems,
                     subtotal = subtotal,

@@ -12,27 +12,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import coil.compose.AsyncImage
-import com.yashas.shoplite.domain.model.CartItem
 import com.yashas.shoplite.presentation.cart.components.CartSummary
-
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.platform.LocalLayoutDirection
-
-import com.yashas.shoplite.presentation.components.AnimatedIconButton
+import com.yashas.shoplite.presentation.cart.components.CartItemRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCheckout: () -> Unit,
+    onNavigateToProductDetails: (String) -> Unit,
     viewModel: CartViewModel = hiltViewModel(
         checkNotNull(
             LocalViewModelStoreOwner.current
@@ -51,6 +42,13 @@ fun CartScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (state.items.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.clearCart() }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Clear Cart")
+                        }
                     }
                 }
             )
@@ -93,86 +91,11 @@ fun CartScreen(
                         item = item,
                         currency = currency,
                         formatPrice = viewModel::formatPrice,
+                        onClick = { onNavigateToProductDetails(item.productId) },
                         onQuantityChanged = { newQty -> viewModel.updateQuantity(item.productId, newQty) },
                         onRemove = { viewModel.removeItem(item.productId) }
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun CartItemRow(
-    item: CartItem,
-    currency: String,
-    formatPrice: (Double, String) -> String,
-    onQuantityChanged: (Int) -> Unit,
-    onRemove: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AsyncImage(
-                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                    .data(item.imageUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = item.name,
-                placeholder = ColorPainter(Color.LightGray),
-                error = androidx.compose.ui.res.painterResource(com.yashas.shoplite.R.drawable.baseline_image_not_available_24),
-                modifier = Modifier
-                    .size(80.dp)
-                    .aspectRatio(1f),
-                contentScale = ContentScale.Fit
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = formatPrice(item.price, currency),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AnimatedIconButton(
-                        onClick = { onQuantityChanged(item.quantity - 1) },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Text("-", style = MaterialTheme.typography.titleLarge)
-                    }
-                    Text(
-                        text = item.quantity.toString(),
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    AnimatedIconButton(
-                        onClick = { onQuantityChanged(item.quantity + 1) },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Text("+", style = MaterialTheme.typography.titleLarge)
-                    }
-                }
-            }
-            AnimatedIconButton(onClick = onRemove) {
-                Icon(Icons.Default.Delete, contentDescription = "Remove")
             }
         }
     }

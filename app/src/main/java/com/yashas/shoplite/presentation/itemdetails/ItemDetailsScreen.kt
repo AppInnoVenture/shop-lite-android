@@ -26,14 +26,13 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import coil.compose.AsyncImage
-import com.yashas.shoplite.domain.model.Review
-
 import androidx.compose.foundation.border
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Close
 import com.yashas.shoplite.presentation.components.AnimatedIconButton
+import com.yashas.shoplite.presentation.itemdetails.components.ReviewItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,7 +150,7 @@ fun ItemDetailsScreen(
             ) {
                 // Image Carousel
                 item {
-                    val images = if (product.images.isNotEmpty()) product.images else listOf(product.imageUrl)
+                    val images = product.images.ifEmpty { listOf(product.imageUrl) }
                     val pagerState = rememberPagerState(pageCount = { images.size })
                     
                     Box(modifier = Modifier.fillMaxWidth()) {
@@ -343,44 +342,6 @@ fun ItemDetailsScreen(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun ReviewItem(review: Review) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = review.reviewerName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = review.date.substringBefore("T"),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                repeat(5) { i ->
-                    Icon(
-                        Icons.Default.Star,
-                        contentDescription = null,
-                        tint = if (i < review.rating) Color(0xFFFFC107) else Color.LightGray,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = review.comment, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

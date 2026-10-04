@@ -87,9 +87,3 @@ class ItemDetailsViewModel @Inject constructor(
         }
     }
 }
-
-data class ItemDetailsState(
-    val product: Product? = null,
-    val isLoading: Boolean = false,
-    val error: String? = null
-)

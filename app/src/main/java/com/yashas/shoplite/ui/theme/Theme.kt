@@ -7,8 +7,8 @@ import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
     primary = PrimaryBlueDark,
-    background = Color(0xFF121212),
-    surface = Color(0xFF1E1E1E),
+    background = BackgroundDark,
+    surface = SurfaceDark,
     onBackground = Color.White,
     onSurface = Color.White
 )
@@ -23,8 +23,6 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun ShopLiteTheme(
-    // In your SettingsViewModel, you will expose a Flow<ThemePreference>.
-    // Pass the collected value here. Default to system theme.
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {

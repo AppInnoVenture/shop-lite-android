@@ -38,7 +38,11 @@ fun ShopLiteNavGraph(
         }
 
         composable<Destination.Cart> {
-            CartScreen(onNavigateBack = { navController.popBackStack() }, onNavigateToCheckout = { /* Optional */ })
+            CartScreen(
+                onNavigateBack = { navController.popBackStack() }, 
+                onNavigateToCheckout = { /* Optional */ },
+                onNavigateToProductDetails = { id -> navController.navigate(Destination.ProductDetails(id)) }
+            )
         }
 
         composable<Destination.Settings> {

@@ -15,11 +15,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class WishlistState(
-    val items: List<Product> = emptyList(),
-    val isLoading: Boolean = true
-)
-
 @HiltViewModel
 class WishlistViewModel @Inject constructor(
     private val wishlistUseCases: WishlistUseCases,

@@ -2,131 +2,106 @@ package com.yashas.shoplite.presentation.catalog.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.yashas.shoplite.domain.model.Product
+import com.yashas.shoplite.presentation.components.AnimatedIconButton
 
 @Composable
 fun ProductCard(
     product: Product,
-    onProductClick: () -> Unit,
-    onAddToCartClick: () -> Unit,
-    modifier: Modifier = Modifier
+    isFavorite: Boolean,
+    currency: String,
+    formatPrice: (Double, String) -> String,
+    onClick: () -> Unit,
+    onAddToCart: () -> Unit,
+    onToggleFavorite: () -> Unit
 ) {
-    var isFavorite by remember { mutableStateOf(false) }
-
     Card(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onProductClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-            ) {
+        Column {
+            Box {
                 AsyncImage(
-                    model = product.imageUrl,
+                    model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                        .data(product.imageUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = product.name,
+                    placeholder = ColorPainter(Color.LightGray),
+                    error = androidx.compose.ui.res.painterResource(com.yashas.shoplite.R.drawable.baseline_image_not_available_24),
                     modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    contentScale = ContentScale.Fit
                 )
-
-                IconButton(
-                    onClick = { isFavorite = !isFavorite },
+                AnimatedIconButton(
+                    onClick = onToggleFavorite,
                     modifier = Modifier.align(Alignment.TopEnd)
                 ) {
                     Icon(
-                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        imageVector = Icons.Default.Favorite,
                         contentDescription = "Favorite",
-                        tint = if (isFavorite) Color.Red else Color.Gray
+                        tint = if (isFavorite) Color.Red else Color.LightGray
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = product.category.uppercase(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = product.name,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = "Rating",
-                    tint = Color(0xFFFFB300),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
+            Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    text = product.rating.toString(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "$${product.price}",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = product.name,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-
-                IconButton(
-                    onClick = onAddToCartClick,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.size(36.dp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.AddShoppingCart,
-                        contentDescription = "Add to Cart",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Column {
+                        Text(
+                            text = formatPrice(product.price - (product.price * (product.discountPercentage / 100)), currency),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (product.discountPercentage > 0) {
+                            Text(
+                                text = formatPrice(product.price, currency),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                ),
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                    AnimatedIconButton(
+                        onClick = onAddToCart,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.ShoppingCart,
+                            contentDescription = "Add to Cart",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }
