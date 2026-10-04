@@ -4,14 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yashas.shoplite.data.util.NetworkConnectivityManager
 import com.yashas.shoplite.domain.model.Product
-import com.yashas.shoplite.domain.usecase.cart.AddToCartUseCase
-import com.yashas.shoplite.domain.usecase.cart.GetCartUseCase
-import com.yashas.shoplite.domain.usecase.wishlist.GetWishlistUseCase
-import com.yashas.shoplite.domain.usecase.wishlist.ToggleWishlistUseCase
-import com.yashas.shoplite.domain.usecase.product.GetCategoriesUseCase
-import com.yashas.shoplite.domain.usecase.product.GetProductsByCategoryUseCase
-import com.yashas.shoplite.domain.usecase.product.GetProductsUseCase
-import com.yashas.shoplite.domain.usecase.product.SearchProductsUseCase
+import com.yashas.shoplite.domain.usecase.cart.CartUseCases
+import com.yashas.shoplite.domain.usecase.catalog.CatalogUseCases
+import com.yashas.shoplite.domain.usecase.wishlist.WishlistUseCases
 import com.yashas.shoplite.domain.usecase.settings.CurrencyUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -31,14 +26,9 @@ enum class SortOption(val displayName: String) {
 @OptIn(FlowPreview::class)
 @HiltViewModel
 class CatalogViewModel @Inject constructor(
-    private val getProductsUseCase: GetProductsUseCase,
-    private val getCategoriesUseCase: GetCategoriesUseCase,
-    private val searchProductsUseCase: SearchProductsUseCase,
-    private val getProductsByCategoryUseCase: GetProductsByCategoryUseCase,
-    private val addToCartUseCase: AddToCartUseCase,
-    private val getCartUseCase: GetCartUseCase,
-    private val getWishlistUseCase: GetWishlistUseCase,
-    private val toggleWishlistUseCase: ToggleWishlistUseCase,
+    private val catalogUseCases: CatalogUseCases,
+    private val cartUseCases: CartUseCases,
+    private val wishlistUseCases: WishlistUseCases,
     private val currencyUseCase: CurrencyUseCase,
     networkConnectivityManager: NetworkConnectivityManager
 ) : ViewModel() {
@@ -57,13 +47,13 @@ class CatalogViewModel @Inject constructor(
         initialValue = true
     )
     
-    val cartItems = getCartUseCase().stateIn(
+    val cartItems = cartUseCases.getCart().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
     
-    val wishlistIds = getWishlistUseCase.getIds().stateIn(
+    val wishlistIds = wishlistUseCases.getWishlistIds().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
@@ -87,22 +77,22 @@ class CatalogViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             
-            val cacheValid = getProductsUseCase.isCacheValid()
+            val cacheValid = catalogUseCases.getProducts.isCacheValid()
             val networkAvailable = isNetworkAvailable.value
             
             if (!cacheValid && networkAvailable) {
-                val result = getProductsUseCase.sync(forceRefresh = true)
+                val result = catalogUseCases.getProducts.sync(forceRefresh = true)
                 if (result.isFailure && fetchedProductsFlow.value.isEmpty()) {
                     _state.update { it.copy(error = result.exceptionOrNull()?.message) }
                 }
             } else {
                 launch { 
-                    getProductsUseCase.sync(forceRefresh = false) 
+                    catalogUseCases.getProducts.sync(forceRefresh = false) 
                 }
             }
             
             // Now start observing DB
-            getProductsUseCase().collect { dbProducts ->
+            catalogUseCases.getProducts().collect { dbProducts ->
                 fetchedProductsFlow.value = dbProducts
                 
                 // Derive categories dynamically from local DB
@@ -168,13 +158,13 @@ class CatalogViewModel @Inject constructor(
         _state.update { it.copy(isLoading = true, error = null) }
         try {
             if (query.isNotBlank()) {
-                val res = searchProductsUseCase(query)
+                val res = catalogUseCases.searchProducts(query)
                 if (res.isFailure) throw res.exceptionOrNull() ?: Exception("Search failed")
             } else if (category != "All") {
-                val res = getProductsByCategoryUseCase(category)
+                val res = catalogUseCases.getProductsByCategory(category)
                 if (res.isFailure) throw res.exceptionOrNull() ?: Exception("Category fetch failed")
             } else {
-                val res = getProductsUseCase.sync(forceRefresh = false)
+                val res = catalogUseCases.getProducts.sync(forceRefresh = false)
                 if (res.isFailure) throw res.exceptionOrNull() ?: Exception("Sync failed")
             }
             _state.update { it.copy(isLoading = false) }
@@ -190,7 +180,7 @@ class CatalogViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            val result = getProductsUseCase.sync(forceRefresh = true)
+            val result = catalogUseCases.getProducts.sync(forceRefresh = true)
             result.onFailure { error ->
                 _state.update { it.copy(error = error.message) }
             }
@@ -215,13 +205,13 @@ class CatalogViewModel @Inject constructor(
 
     fun addToCart(product: Product) {
         viewModelScope.launch {
-            addToCartUseCase(product)
+            cartUseCases.addToCart(product)
         }
     }
     
     fun toggleFavorite(product: Product) {
         viewModelScope.launch {
-            toggleWishlistUseCase(product)
+            wishlistUseCases.toggleWishlist(product)
         }
     }
 }

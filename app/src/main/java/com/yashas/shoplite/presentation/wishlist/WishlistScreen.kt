@@ -1,4 +1,4 @@
-package com.yashas.shoplite.presentation.favorites
+package com.yashas.shoplite.presentation.wishlist
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -29,10 +29,10 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavoritesScreen(
+fun WishlistScreen(
     onNavigateBack: () -> Unit,
     onNavigateToProductDetails: (String) -> Unit,
-    viewModel: FavoritesViewModel = hiltViewModel(
+    viewModel: WishlistViewModel = hiltViewModel(
         checkNotNull(
             LocalViewModelStoreOwner.current
         ) {

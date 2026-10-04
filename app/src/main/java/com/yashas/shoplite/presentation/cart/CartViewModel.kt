@@ -2,10 +2,7 @@ package com.yashas.shoplite.presentation.cart
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.yashas.shoplite.domain.usecase.cart.ClearCartUseCase
-import com.yashas.shoplite.domain.usecase.cart.GetCartUseCase
-import com.yashas.shoplite.domain.usecase.cart.RemoveFromCartUseCase
-import com.yashas.shoplite.domain.usecase.cart.UpdateCartQuantityUseCase
+import com.yashas.shoplite.domain.usecase.cart.CartUseCases
 import com.yashas.shoplite.domain.usecase.settings.CurrencyUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -14,10 +11,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CartViewModel @Inject constructor(
-    getCartUseCase: GetCartUseCase,
-    private val updateCartQuantityUseCase: UpdateCartQuantityUseCase,
-    private val removeFromCartUseCase: RemoveFromCartUseCase,
-    private val clearCartUseCase: ClearCartUseCase,
+    private val cartUseCases: CartUseCases,
     private val currencyUseCase: CurrencyUseCase
 ) : ViewModel() {
 
@@ -32,7 +26,7 @@ class CartViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            getCartUseCase().collect { items ->
+            cartUseCases.getCart().collect { items ->
                 var subtotal = 0.0
                 val cartItems = items.map { item ->
                     subtotal += item.price * item.quantity
@@ -57,22 +51,22 @@ class CartViewModel @Inject constructor(
     fun updateQuantity(productId: String, quantity: Int) {
         viewModelScope.launch {
             if (quantity <= 0) {
-                removeFromCartUseCase(productId)
+                cartUseCases.removeFromCart(productId)
             } else {
-                updateCartQuantityUseCase(productId, quantity)
+                cartUseCases.updateCartQuantity(productId, quantity)
             }
         }
     }
 
     fun removeItem(productId: String) {
         viewModelScope.launch {
-            removeFromCartUseCase(productId)
+            cartUseCases.removeFromCart(productId)
         }
     }
 
     fun clearCart() {
         viewModelScope.launch {
-            clearCartUseCase()
+            cartUseCases.clearCart()
         }
     }
 }

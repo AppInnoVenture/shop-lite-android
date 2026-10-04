@@ -7,7 +7,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.yashas.shoplite.data.local.ShopLiteDatabase
 import com.yashas.shoplite.data.local.dao.CartDao
-import com.yashas.shoplite.data.local.dao.FavoriteDao
+import com.yashas.shoplite.data.local.dao.WishlistDao
 import com.yashas.shoplite.data.local.dao.ProductDao
 import com.yashas.shoplite.data.remote.CatalogApiService
 import com.yashas.shoplite.data.util.NetworkConnectivityManager
@@ -74,7 +74,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideFavoriteDao(db: ShopLiteDatabase): FavoriteDao = db.favoriteDao
+    fun provideWishlistDao(db: ShopLiteDatabase): WishlistDao = db.wishlistDao
     
     @Provides
     @Singleton

@@ -8,32 +8,32 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.yashas.shoplite.navigation.routes.Destination
 import com.yashas.shoplite.presentation.cart.CartScreen
-import com.yashas.shoplite.presentation.favorites.FavoritesScreen
-import com.yashas.shoplite.presentation.home.HomeScreen
-import com.yashas.shoplite.presentation.productdetails.ProductDetailScreen
+import com.yashas.shoplite.presentation.wishlist.WishlistScreen
+import com.yashas.shoplite.presentation.catalog.CatalogScreen
+import com.yashas.shoplite.presentation.itemdetails.ItemDetailsScreen
 import com.yashas.shoplite.presentation.settings.SettingsScreen
 
 @Composable
-fun AppNavHost(
+fun ShopLiteNavGraph(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController()
 ) {
     NavHost(navController = navController, startDestination = Destination.Main, modifier = modifier) {
         
         composable<Destination.Main> {
-            HomeScreen(
+            CatalogScreen(
                 onNavigateToProductDetails = { id -> navController.navigate(Destination.ProductDetails(id)) },
                 onNavigateToCart = { navController.navigate(Destination.Cart) },
                 onNavigateToSettings = { navController.navigate(Destination.Settings) },
-                onNavigateToFavorites = { navController.navigate(Destination.Favorites) }
+                onNavigateToWishlist = { navController.navigate(Destination.Wishlist) }
             )
         }
 
         composable<Destination.ProductDetails> {
-            ProductDetailScreen(
+            ItemDetailsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToCart = { navController.navigate(Destination.Cart) },
-                onNavigateToFavorites = { navController.navigate(Destination.Favorites) }
+                onNavigateToWishlist = { navController.navigate(Destination.Wishlist) }
             )
         }
 
@@ -45,12 +45,12 @@ fun AppNavHost(
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToCart = { navController.navigate(Destination.Cart) },
-                onNavigateToFavorites = { navController.navigate(Destination.Favorites) }
+                onNavigateToWishlist = { navController.navigate(Destination.Wishlist) }
             )
         }
 
-        composable<Destination.Favorites> {
-            FavoritesScreen(
+        composable<Destination.Wishlist> {
+            WishlistScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToProductDetails = { id -> navController.navigate(Destination.ProductDetails(id)) }
             )

@@ -1,11 +1,10 @@
-package com.yashas.shoplite.presentation.favorites
+package com.yashas.shoplite.presentation.wishlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yashas.shoplite.domain.model.Product
-import com.yashas.shoplite.domain.usecase.cart.AddToCartUseCase
-import com.yashas.shoplite.domain.usecase.favorites.GetFavoritesUseCase
-import com.yashas.shoplite.domain.usecase.favorites.ToggleFavoriteUseCase
+import com.yashas.shoplite.domain.usecase.cart.CartUseCases
+import com.yashas.shoplite.domain.usecase.wishlist.WishlistUseCases
 import com.yashas.shoplite.domain.usecase.settings.CurrencyUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,21 +15,20 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class FavoritesState(
+data class WishlistState(
     val items: List<Product> = emptyList(),
     val isLoading: Boolean = true
 )
 
 @HiltViewModel
-class FavoritesViewModel @Inject constructor(
-    private val getFavoritesUseCase: GetFavoritesUseCase,
-    private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
-    private val addToCartUseCase: AddToCartUseCase,
+class WishlistViewModel @Inject constructor(
+    private val wishlistUseCases: WishlistUseCases,
+    private val cartUseCases: CartUseCases,
     private val currencyUseCase: CurrencyUseCase
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(FavoritesState())
-    val state: StateFlow<FavoritesState> = _state.asStateFlow()
+    private val _state = MutableStateFlow(WishlistState())
+    val state: StateFlow<WishlistState> = _state.asStateFlow()
     
     val currency: StateFlow<String> = currencyUseCase.getCurrency().stateIn(
         scope = viewModelScope,
@@ -40,8 +38,8 @@ class FavoritesViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            getFavoritesUseCase().collect { items ->
-                _state.value = FavoritesState(items = items, isLoading = false)
+            wishlistUseCases.getWishlist().collect { items ->
+                _state.value = WishlistState(items = items, isLoading = false)
             }
         }
     }
@@ -52,13 +50,13 @@ class FavoritesViewModel @Inject constructor(
 
     fun toggleFavorite(product: Product) {
         viewModelScope.launch {
-            toggleFavoriteUseCase(product)
+            wishlistUseCases.toggleWishlist(product)
         }
     }
 
     fun addToCart(product: Product) {
         viewModelScope.launch {
-            addToCartUseCase(product, 1)
+            cartUseCases.addToCart(product, 1)
         }
     }
 }

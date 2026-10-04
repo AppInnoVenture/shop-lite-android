@@ -10,7 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.yashas.shoplite.domain.repository.SettingsRepository
-import com.yashas.shoplite.navigation.nav_graph.AppNavHost
+import com.yashas.shoplite.navigation.nav_graph.ShopLiteNavGraph
 import com.yashas.shoplite.ui.theme.ShopLiteTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
                 }
                 
                 ShopLiteTheme(darkTheme = isDarkTheme) {
-                    AppNavHost()
+                    ShopLiteNavGraph()
                 }
             }
         }

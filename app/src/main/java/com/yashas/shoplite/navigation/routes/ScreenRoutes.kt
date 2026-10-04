@@ -16,5 +16,5 @@ sealed interface Destination {
     data object Settings : Destination
 
     @Serializable
-    data object Favorites : Destination
+    data object Wishlist : Destination
 }

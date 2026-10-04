@@ -1,4 +1,4 @@
-package com.yashas.shoplite.presentation.productdetails
+package com.yashas.shoplite.presentation.itemdetails
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,11 +39,11 @@ import com.yashas.shoplite.presentation.components.AnimatedIconButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductDetailScreen(
+fun ItemDetailsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCart: () -> Unit,
-    onNavigateToFavorites: () -> Unit,
-    viewModel: ProductDetailViewModel = hiltViewModel(
+    onNavigateToWishlist: () -> Unit,
+    viewModel: ItemDetailsViewModel = hiltViewModel(
         checkNotNull(
             LocalViewModelStoreOwner.current
         ) {

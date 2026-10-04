@@ -1,47 +1,39 @@
-package com.yashas.shoplite.presentation.productdetails
+package com.yashas.shoplite.presentation.itemdetails
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yashas.shoplite.domain.model.Product
-import com.yashas.shoplite.domain.usecase.cart.AddToCartUseCase
-import com.yashas.shoplite.domain.usecase.cart.GetCartUseCase
-import com.yashas.shoplite.domain.usecase.favorites.GetFavoritesUseCase
-import com.yashas.shoplite.domain.usecase.favorites.ToggleFavoriteUseCase
+import com.yashas.shoplite.domain.usecase.cart.CartUseCases
+import com.yashas.shoplite.domain.usecase.wishlist.WishlistUseCases
 import com.yashas.shoplite.domain.usecase.product.GetProductUseCase
 import com.yashas.shoplite.domain.usecase.settings.CurrencyUseCase
-import com.yashas.shoplite.domain.usecase.cart.UpdateCartQuantityUseCase
-import com.yashas.shoplite.domain.usecase.cart.RemoveFromCartUseCase
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import dagger.hilt.android.lifecycle.HiltViewModel
 @HiltViewModel
-class ProductDetailViewModel @Inject constructor(
+class ItemDetailsViewModel @Inject constructor(
     private val getProductUseCase: GetProductUseCase,
-    private val addToCartUseCase: AddToCartUseCase,
-    private val updateCartQuantityUseCase: UpdateCartQuantityUseCase,
-    private val removeFromCartUseCase: RemoveFromCartUseCase,
-    private val getCartUseCase: GetCartUseCase,
-    private val getFavoritesUseCase: GetFavoritesUseCase,
-    private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
+    private val cartUseCases: CartUseCases,
+    private val wishlistUseCases: WishlistUseCases,
     private val currencyUseCase: CurrencyUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val productId: String = checkNotNull(savedStateHandle["id"])
 
-    private val _state = MutableStateFlow(ProductDetailState())
+    private val _state = MutableStateFlow(ItemDetailsState())
     val state = _state.asStateFlow()
     
-    val cartItems = getCartUseCase().stateIn(
+    val cartItems = cartUseCases.getCart().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
     
-    val favoriteIds = getFavoritesUseCase.getIds().stateIn(
+    val favoriteIds = wishlistUseCases.getWishlistIds().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
@@ -75,28 +67,28 @@ class ProductDetailViewModel @Inject constructor(
 
     fun addToCart(product: Product) {
         viewModelScope.launch {
-            addToCartUseCase(product)
+            cartUseCases.addToCart(product)
         }
     }
     
     fun updateCartQuantity(productId: String, quantity: Int) {
         viewModelScope.launch {
             if (quantity <= 0) {
-                removeFromCartUseCase(productId)
+                cartUseCases.removeFromCart(productId)
             } else {
-                updateCartQuantityUseCase(productId, quantity)
+                cartUseCases.updateCartQuantity(productId, quantity)
             }
         }
     }
     
     fun toggleFavorite(product: Product) {
         viewModelScope.launch {
-            toggleFavoriteUseCase(product)
+            wishlistUseCases.toggleWishlist(product)
         }
     }
 }
 
-data class ProductDetailState(
+data class ItemDetailsState(
     val product: Product? = null,
     val isLoading: Boolean = false,
     val error: String? = null

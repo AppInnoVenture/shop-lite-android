@@ -21,7 +21,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToCart: () -> Unit,
-    onNavigateToFavorites: () -> Unit,
+    onNavigateToWishlist: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(
         checkNotNull(
             LocalViewModelStoreOwner.current
@@ -82,7 +82,7 @@ fun SettingsScreen(
             ListItem(
                 headlineContent = { Text("Liked Products") },
                 leadingContent = { Icon(Icons.Default.Favorite, contentDescription = null) },
-                modifier = Modifier.clickable { onNavigateToFavorites() }
+                modifier = Modifier.clickable { onNavigateToWishlist() }
             )
         }
     }

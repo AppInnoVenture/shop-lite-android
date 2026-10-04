@@ -3,7 +3,7 @@ package com.yashas.shoplite.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "favorites")
-data class FavoriteEntity(
+@Entity(tableName = "wishlist")
+data class WishlistEntity(
     @PrimaryKey val productId: String
 )
