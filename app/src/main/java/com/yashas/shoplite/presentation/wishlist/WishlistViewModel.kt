@@ -54,4 +54,10 @@ class WishlistViewModel @Inject constructor(
             cartUseCases.addToCart(product, 1)
         }
     }
+
+    fun clearWishlist() {
+        viewModelScope.launch {
+            wishlistUseCases.clearWishlist()
+        }
+    }
 }

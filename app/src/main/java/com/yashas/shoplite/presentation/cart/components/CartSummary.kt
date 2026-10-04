@@ -26,7 +26,7 @@ fun CartSummary(
     ) {
         Column(
             modifier = Modifier
-                .navigationBarsPadding()
+                // .navigationBarsPadding()
                 .padding(16.dp)
                 .fillMaxWidth()
         ) {

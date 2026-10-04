@@ -33,6 +33,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Close
 import com.yashas.shoplite.presentation.components.AnimatedIconButton
 import com.yashas.shoplite.presentation.itemdetails.components.ReviewItem
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalLayoutDirection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,10 +57,23 @@ fun ItemDetailsScreen(
 
     var zoomedImage by remember { mutableStateOf<String?>(null) }
 
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("Details") },
+                title = {
+                    Text(
+                        text = "Details",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                ),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -79,53 +94,59 @@ fun ItemDetailsScreen(
         bottomBar = {
             state.product?.let { product ->
                 val cartItem = cartItems.find { it.productId == product.id }
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shadowElevation = 8.dp,
-                    color = MaterialTheme.colorScheme.surface
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Transparent)
+                        .navigationBarsPadding()
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shadowElevation = 8.dp,
+                        color = MaterialTheme.colorScheme.surface
                     ) {
-                        if (cartItem != null) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                AnimatedIconButton(
-                                    onClick = { viewModel.updateCartQuantity(cartItem.productId, cartItem.quantity - 1) },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Text("-", style = MaterialTheme.typography.titleLarge)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (cartItem != null) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    AnimatedIconButton(
+                                        onClick = { viewModel.updateCartQuantity(cartItem.productId, cartItem.quantity - 1) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Text("-", style = MaterialTheme.typography.titleLarge)
+                                    }
+                                    Text(
+                                        text = cartItem.quantity.toString(),
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    AnimatedIconButton(
+                                        onClick = { viewModel.updateCartQuantity(cartItem.productId, cartItem.quantity + 1) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Text("+", style = MaterialTheme.typography.titleLarge)
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Button(
+                                        onClick = onNavigateToCart,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Open Cart")
+                                    }
                                 }
-                                Text(
-                                    text = cartItem.quantity.toString(),
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                AnimatedIconButton(
-                                    onClick = { viewModel.updateCartQuantity(cartItem.productId, cartItem.quantity + 1) },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Text("+", style = MaterialTheme.typography.titleLarge)
-                                }
-                                Spacer(modifier = Modifier.width(16.dp))
+                            } else {
                                 Button(
-                                    onClick = onNavigateToCart,
-                                    modifier = Modifier.fillMaxWidth()
+                                    onClick = { viewModel.addToCart(product) },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = product.stock > 0
                                 ) {
-                                    Text("Open Cart")
+                                    Text(if (product.stock > 0) "Add to Cart" else "Out of Stock")
                                 }
-                            }
-                        } else {
-                            Button(
-                                onClick = { viewModel.addToCart(product) },
-                                modifier = Modifier.weight(1f),
-                                enabled = product.stock > 0
-                            ) {
-                                Text(if (product.stock > 0) "Add to Cart" else "Out of Stock")
                             }
                         }
                     }
@@ -143,10 +164,17 @@ fun ItemDetailsScreen(
             }
         } else if (state.product != null) {
             val product = state.product!!
+            val layoutDirection = LocalLayoutDirection.current
+
             LazyColumn(
+                contentPadding = PaddingValues(bottom = padding.calculateBottomPadding() + 16.dp),
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(
+                        top = padding.calculateTopPadding(),
+                        start = padding.calculateStartPadding(layoutDirection),
+                        end = padding.calculateEndPadding(layoutDirection)
+                    )
             ) {
                 // Image Carousel
                 item {

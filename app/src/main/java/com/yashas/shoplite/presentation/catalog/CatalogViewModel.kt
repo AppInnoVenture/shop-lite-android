@@ -153,6 +153,19 @@ class CatalogViewModel @Inject constructor(
                     fetchData(searchQueryFlow.value, category)
                 }
         }
+        
+        // Auto-refresh when network comes back online
+        viewModelScope.launch {
+            var wasOffline = false
+            isNetworkAvailable.collect { isAvailable ->
+                if (isAvailable && wasOffline) {
+                    if (fetchedProductsFlow.value.isEmpty() || _state.value.error != null) {
+                        refresh()
+                    }
+                }
+                wasOffline = !isAvailable
+            }
+        }
     }
 
     private suspend fun fetchData(query: String, category: String) {

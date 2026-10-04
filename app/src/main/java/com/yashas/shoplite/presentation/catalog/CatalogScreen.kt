@@ -92,7 +92,12 @@ fun CatalogScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("ShopLite") },
+                title = {
+                    Text(
+                        text = "ShopLite",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -108,7 +113,8 @@ fun CatalogScreen(
                                 if (cartItemCount > 0) {
                                     Badge { Text(cartItemCount.toString()) }
                                 }
-                            }
+                            },
+                            modifier = Modifier.padding(end = 8.dp)
                         ) {
                             Icon(Icons.Default.ShoppingCart, contentDescription = "Cart")
                         }
@@ -277,11 +283,15 @@ fun CatalogScreen(
                                         }
                                         SwipeToDismissBox(
                                             state = dismissState,
-                                            backgroundContent = { Box(Modifier.fillMaxWidth().background(Color.Transparent)) },
+                                            backgroundContent = { Box(Modifier
+                                                .fillMaxWidth()
+                                                .background(Color.Transparent)) },
                                             content = {
                                                 Surface(
                                                     color = MaterialTheme.colorScheme.errorContainer,
-                                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(bottom = 8.dp),
                                                     shape = RoundedCornerShape(8.dp)
                                                 ) {
                                                     Text(
@@ -315,7 +325,9 @@ fun CatalogScreen(
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 32.dp)
                                 ) {
                                     Text(
                                         text = "✨ That's all folks! ✨",

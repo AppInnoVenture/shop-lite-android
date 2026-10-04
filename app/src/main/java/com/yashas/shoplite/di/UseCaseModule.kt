@@ -11,6 +11,7 @@ import com.yashas.shoplite.domain.usecase.product.GetCategoriesUseCase
 import com.yashas.shoplite.domain.usecase.product.GetProductsByCategoryUseCase
 import com.yashas.shoplite.domain.usecase.product.GetProductsUseCase
 import com.yashas.shoplite.domain.usecase.product.SearchProductsUseCase
+import com.yashas.shoplite.domain.usecase.wishlist.ClearWishlistUseCase
 import com.yashas.shoplite.domain.usecase.wishlist.GetWishlistIdsUseCase
 import com.yashas.shoplite.domain.usecase.wishlist.GetWishlistUseCase
 import com.yashas.shoplite.domain.usecase.wishlist.ToggleWishlistUseCase
@@ -64,12 +65,14 @@ object UseCaseModule {
     fun provideWishlistUseCases(
         getWishlist: GetWishlistUseCase,
         toggleWishlist: ToggleWishlistUseCase,
-        getWishlistIds: GetWishlistIdsUseCase
+        getWishlistIds: GetWishlistIdsUseCase,
+        clearWishlist: ClearWishlistUseCase
     ): WishlistUseCases {
         return WishlistUseCases(
             getWishlist = getWishlist,
             toggleWishlist = toggleWishlist,
-            getWishlistIds = getWishlistIds
+            getWishlistIds = getWishlistIds,
+            clearWishlist = clearWishlist
         )
     }
 }

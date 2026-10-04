@@ -46,4 +46,13 @@ class WishlistRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override suspend fun clearWishlist(): Result<Unit> {
+        return try {
+            dao.clearWishlist()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

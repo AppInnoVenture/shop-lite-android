@@ -1,12 +1,22 @@
-# Add project specific R8 rules here.
-# AGP will combine all keep rule files in src/main/keepRules to pass to R8
-#
-# For more details, see
-#   https://d.android.com/r/tools/r8/keep-rules
+# Gson rules
+-keep class com.google.gson.** { *; }
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+-keepattributes Signature
+-keepattributes *Annotation*
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Kotlinx Serialization rules
+-keepattributes *Annotation*, InnerClasses
+-keep class kotlinx.serialization.** { *; }
+-keepclassmembers class kotlinx.serialization.** { *; }
+-keepclassmembers @kotlinx.serialization.Serializable class * {
+    <init>(...);
+    *** Companion;
+}
+
+# Domain Models
+-keep class com.yashas.shoplite.domain.model.** { *; }
+
+# Local Entities
+-keep class com.yashas.shoplite.data.local.entity.** { *; }

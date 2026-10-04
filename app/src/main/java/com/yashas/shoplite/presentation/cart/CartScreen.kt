@@ -17,6 +17,12 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.yashas.shoplite.presentation.cart.components.CartSummary
 import androidx.compose.ui.platform.LocalLayoutDirection
 import com.yashas.shoplite.presentation.cart.components.CartItemRow
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,10 +41,23 @@ fun CartScreen(
     val state by viewModel.state.collectAsState()
     val currency by viewModel.currency.collectAsState()
 
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("My Cart") },
+                title = {
+                    Text(
+                        text = "My Cart",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                ),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -55,14 +74,21 @@ fun CartScreen(
         },
         bottomBar = {
             if (state.items.isNotEmpty()) {
-                CartSummary(
-                    subtotal = state.subtotal,
-                    deliveryFee = state.deliveryFee,
-                    total = state.total,
-                    currency = currency,
-                    formatPrice = viewModel::formatPrice,
-                    onCheckout = onNavigateToCheckout
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Transparent)
+                        .navigationBarsPadding()
+                ) {
+                    CartSummary(
+                        subtotal = state.subtotal,
+                        deliveryFee = state.deliveryFee,
+                        total = state.total,
+                        currency = currency,
+                        formatPrice = viewModel::formatPrice,
+                        onCheckout = onNavigateToCheckout
+                    )
+                }
             }
         }
     ) { padding ->
