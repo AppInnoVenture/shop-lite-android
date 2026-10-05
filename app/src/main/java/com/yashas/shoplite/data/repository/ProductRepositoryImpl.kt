@@ -101,8 +101,7 @@ class ProductRepositoryImpl @Inject constructor(
             productDao.insertAll(entities)
             Result.success(entities.map { it.toDomain() })
         } catch (e: Exception) {
-            val cached = productDao.getAllProducts().filter { it.name.contains(query, ignoreCase = true) }
-            Result.success(cached.map { it.toDomain() })
+            Result.failure(e)
         }
     }
     
@@ -122,8 +121,7 @@ class ProductRepositoryImpl @Inject constructor(
             productDao.insertAll(entities)
             Result.success(entities.map { it.toDomain() })
         } catch (e: Exception) {
-            val cached = productDao.getAllProducts().filter { it.category.equals(category, ignoreCase = true) }
-            Result.success(cached.map { it.toDomain() })
+            Result.failure(e)
         }
     }
 

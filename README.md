@@ -62,7 +62,7 @@ To achieve the "Offline-First" requirement, **Room Database** acts as the Single
 
 * **Pagination:** The DummyJSON API supports `limit` and `skip` pagination. For the scope of this project, the app fetches a generous default batch of products rather than implementing a complex infinite-scrolling Paging3 architecture, prioritizing core cart functionality and stability.
 * **Currency Exchange Rates:** The currency converter in Settings uses static, hardcoded multiplier rates for demonstration purposes, rather than connecting to a live forex API.
-* **Stock Validation:** Because the cart operates offline, a user could theoretically add an item to their cart offline that becomes "Out of Stock" on the server. The cart relies on the last-known cached stock value.
+* **API Data Validation:** The current implementation assumes the data payload from the DummyJSON API is 100% valid and correctly formatted. For the scope of this assessment, this is acceptable because the API consistently returns clean mock data. However, in a real-world production environment, I would implement strict data validation, safe-typing, and null-handling mappers before inserting any network data into the Room database to prevent malformed data crashes.
 
 ---
 

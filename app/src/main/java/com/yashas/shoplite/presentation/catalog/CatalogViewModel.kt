@@ -160,6 +160,7 @@ class CatalogViewModel @Inject constructor(
             isNetworkAvailable.collect { isAvailable ->
                 if (isAvailable && wasOffline) {
                     if (fetchedProductsFlow.value.isEmpty() || _state.value.error != null) {
+                        // kotlinx.coroutines.delay(1000.milliseconds) // Give DNS a moment to settle
                         refresh()
                     }
                 }
@@ -169,6 +170,11 @@ class CatalogViewModel @Inject constructor(
     }
 
     private suspend fun fetchData(query: String, category: String) {
+        if (!isNetworkAvailable.value) {
+            _state.update { it.copy(isLoading = false) }
+            return
+        }
+
         _state.update { it.copy(isLoading = true, error = null) }
         try {
             if (query.isNotBlank()) {
@@ -192,6 +198,8 @@ class CatalogViewModel @Inject constructor(
     }
 
     fun refresh() {
+        if (!isNetworkAvailable.value) return
+        
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             val result = catalogUseCases.getProducts.sync(forceRefresh = true)

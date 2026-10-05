@@ -17,7 +17,7 @@ android {
         minSdk = 24
         targetSdk = 37
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -77,5 +77,5 @@ dependencies {
 
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.datastore.preferences)
-    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation(libs.androidx.core.splashscreen)
 }
